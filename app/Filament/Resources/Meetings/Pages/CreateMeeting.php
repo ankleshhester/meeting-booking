@@ -6,6 +6,12 @@ use App\Filament\Resources\Meetings\MeetingResource;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Validation\ValidationException;
 use App\Models\Attendee;
+use App\Models\MeetingMinute;
+use Carbon\Carbon;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\MeetingInviteWithICS;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Auth;
 
 class CreateMeeting extends CreateRecord
 {
@@ -34,5 +40,45 @@ class CreateMeeting extends CreateRecord
         }
 
         return $data;
+    }
+
+    // Use the non-static, protected method signature for the Page hook
+    protected function afterCreate(): void
+    {
+        $meeting = $this->record; // $this->record holds the created Meeting model
+        $formData = $this->data;   // $this->data holds the form input values
+
+        Log::info('*** CreateMeeting afterCreate Hook Triggered ***');
+        // Log::info('Form Data: ' . print_r($formData, true)); // You can log the form data here
+
+
+        // 3. Collect and sync attendees (including host)
+        $attendeeIds = array_map('intval', array_values($formData['add_attendee'] ?? []));
+
+        // Add Host logic
+        if ($meeting->created_by_id && $meeting->host) {
+            $hostAttendee = Attendee::firstOrCreate(
+                ['email' => $meeting->host->email],
+                ['name' => $meeting->host->name]
+            );
+            $attendeeIds[] = $hostAttendee->id;
+        }
+
+        $attendeeIds = array_unique($attendeeIds);
+
+        if (!empty($attendeeIds)) {
+            $meeting->addAttendee()->sync($attendeeIds);
+
+            // 4. Send emails
+            $recipientEmails = Attendee::whereIn('id', $attendeeIds)
+                ->pluck('email')
+                ->filter()
+                ->unique()
+                ->toArray();
+
+            if (!empty($recipientEmails)) {
+                Mail::to($recipientEmails)->send(new MeetingInviteWithICS($meeting));
+            }
+        }
     }
 }

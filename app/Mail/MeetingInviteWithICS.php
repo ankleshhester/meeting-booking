@@ -23,8 +23,18 @@ class MeetingInviteWithICS extends Mailable
     {
         $meeting = $this->meeting;
 
-        $start = Carbon::parse($meeting->date . ' ' . $meeting->start_time)->format('Ymd\THis');
-        $end   = Carbon::parse($meeting->date . ' ' . $meeting->end_time)->format('Ymd\THis');
+        $startDateTime = Carbon::parse($meeting->date); // Start with the correct meeting date
+        $startTime = Carbon::parse($meeting->start_time); // Parse the time component
+
+        $startDateTime->setTime($startTime->hour, $startTime->minute, $startTime->second);
+
+        $start = $startDateTime->format('Ymd\THis');
+
+        $endTime = Carbon::parse($meeting->end_time);
+        $endDateTime = Carbon::parse($meeting->date); // Start with the correct meeting date
+        $endDateTime->setTime($endTime->hour, $endTime->minute, $endTime->second);
+
+        $end = $endDateTime->format('Ymd\THis');
 
         $ics = "BEGIN:VCALENDAR
             VERSION:2.0

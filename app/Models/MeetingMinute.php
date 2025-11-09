@@ -85,21 +85,6 @@ class MeetingMinute extends Model
         '480' => '8 hours',
     ];
 
-    protected function serializeDate(DateTimeInterface $date)
-    {
-        return $date->format('Y-m-d H:i:s');
-    }
-
-    public function getDateAttribute($value)
-    {
-        return $value ? Carbon::parse($value)->format(config('project.date_format')) : null;
-    }
-
-    public function setDateAttribute($value)
-    {
-        $this->attributes['date'] = $value ? Carbon::createFromFormat(config('project.date_format'), $value)->format('Y-m-d') : null;
-    }
-
     public function getDurationLabelAttribute($value)
     {
         return static::DURATION_SELECT[$this->duration] ?? null;

@@ -186,63 +186,7 @@ class MeetingForm
             ->toArray();
     }
 
-    protected function afterCreate(): void
-    {
-        /** @var \App\Models\Meeting $meeting */
-        $meeting = $this->record;
 
-        // Recalculate duration from start/end
-        try {
-            $start = Carbon::parse($meeting->start_time);
-            $end = Carbon::parse($meeting->end_time);
-            $meeting->duration = $start->diffInMinutes($end);
-            $meeting->save();
-        } catch (\Exception $e) {
-            // ignore parse errors
-        }
 
-        // Create MeetingMinute
-        $meetingMinute = MeetingMinute::create([
-            'name' => $meeting->name,
-            'date' => $meeting->date,
-            'start_time' => $meeting->start_time,
-            'duration' => $meeting->duration,
-            'end_time' => $meeting->end_time,
-            'called_by_id' => Auth::id(),
-            'rooms_id' => $meeting->rooms_id,
-            'meeting_mode' => $meeting->meeting_mode,
-            'meeting_id' => $meeting->id,
-        ]);
-
-        // Sync attendees (add_attendee was converted to IDs in mutateFormDataBeforeCreate)
-        $attendeeIds = $meeting->add_attendee ?? [];
-        $attendeeIds = array_map('intval', array_values($attendeeIds));
-
-        // Add Host as attendee automatically
-        if ($meeting->created_by_id) {
-            $hostAttendee = Attendee::firstOrCreate(
-                ['email' => $meeting->host->email],
-                ['name' => $meeting->host->name]
-            );
-
-            $attendeeIds[] = $hostAttendee->id;
-        }
-
-        $attendeeIds = array_unique($attendeeIds);
-
-        if (! empty($attendeeIds)) {
-            $meeting->addAttendee()->sync($attendeeIds);
-            $meetingMinute->present()->sync($attendeeIds);
-
-            // send invitations
-            $recipientEmails = Attendee::whereIn('id', $attendeeIds)->pluck('email')->toArray();
-            $recipientEmails = array_unique(array_filter($recipientEmails));
-
-            if (! empty($recipientEmails)) {
-                Mail::to($recipientEmails)->send(new MeetingInviteWithICS($meeting));
-            }
-        }
-        $this->redirectRoute('filament.resources.meetings.index');
-    }
 
 }
