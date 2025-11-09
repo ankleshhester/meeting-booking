@@ -20,6 +20,7 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Http\Middleware\RedirectUnapprovedUsers;
+use App\Filament\Pages\Auth\Register;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -32,7 +33,7 @@ class AdminPanelProvider extends PanelProvider
             ->login()
             ->sidebarCollapsibleOnDesktop()
             ->sidebarWidth('14rem')
-            ->registration() // ✅ Enable Register page + link
+            ->registration(Register::class) // ✅ Enable Register page + link
             ->passwordReset() // (optional) Forgot password
             ->colors([
                 'primary' => Color::Green['500'],
