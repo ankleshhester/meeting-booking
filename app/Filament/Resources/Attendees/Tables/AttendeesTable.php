@@ -10,6 +10,8 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Filament\Actions\ImportAction;
+use App\Filament\Imports\AttendeeImporter;
 
 class AttendeesTable
 {
@@ -54,6 +56,11 @@ class AttendeesTable
                     ForceDeleteBulkAction::make(),
                     RestoreBulkAction::make(),
                 ]),
+
+                ImportAction::make()
+                    ->label('Import Attendees')
+                    ->icon('heroicon-o-arrow-up-on-square')
+                    ->importer(AttendeeImporter::class),
             ]);
     }
 }
