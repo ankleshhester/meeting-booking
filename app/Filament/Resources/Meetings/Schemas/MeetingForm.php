@@ -1,0 +1,250 @@
+<?php
+
+namespace App\Filament\Resources\Meetings\Schemas;
+
+use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TimePicker;
+use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Schema;
+use Filament\Forms;
+use App\Models\Meeting;
+use Illuminate\Support\Facades\Auth;
+use App\Models\ConferenceRoom;
+use Filament\Notifications\Notification;
+use Carbon\Carbon;
+use Filament\Forms\Components\TagsInput;
+use App\Models\Attendee;
+use App\Models\User;
+use App\Models\MeetingMinute;
+use Illuminate\Support\Facades\Mail;
+use App\Mail\MeetingInvitation;
+use Filament\Forms\FormsComponent;
+use Filament\Schemas\Components\Form;
+use Filament\Schemas\Components\Group;
+use App\Mail\MeetingInviteWithICS;
+use Filament\Forms\Components\Hidden;
+
+class MeetingForm
+{
+    public static function configure(Schema $schema): Schema
+    {
+        return $schema
+            ->components([
+                Forms\Components\TextInput::make('name')
+                    ->label('Meeting Title')
+                    ->columnSpanFull()
+                    ->required(),
+
+                Group::make()
+                ->schema([
+                    Forms\Components\DatePicker::make('date')
+                        ->default(Carbon::today())
+                        ->reactive()
+                        ->afterStateUpdated(fn ($state, callable $set, callable $get) =>
+                            self::updateEndTimeAndRooms($set, $get)
+                        )
+                        ->required(),
+
+                    Forms\Components\TimePicker::make('start_time')
+                        //Start time rounded to next 15 minutes i.e. 10:07 AM -> 10:15 AM, 10:16 AM -> 10:30 AM
+                        ->default(function () {
+                            $now = Carbon::now();
+                            $minutes = (int) $now->format('i');
+                            $roundedMinutes = ceil($minutes / 15) * 15;
+                            if ($roundedMinutes == 60) {
+                                $now->addHour()->setMinute(0);
+                            } else {
+                                $now->setMinute($roundedMinutes);
+                            }
+                            return $now->format('H:i');
+                        })
+                        ->seconds(false)
+                        ->reactive()
+                        ->afterStateUpdated(fn ($state, callable $set, callable $get) =>
+                            self::updateEndTimeAndRooms($set, $get)
+                        )
+                        ->required(),
+
+                    Forms\Components\Select::make('duration')
+                        ->options(Meeting::DURATION_SELECT)
+                        ->default(30)
+                        ->reactive()
+                        ->afterStateUpdated(fn ($state, callable $set, callable $get) =>
+                            self::updateEndTimeAndRooms($set, $get)
+                        )
+                        ->required(),
+
+                    Forms\Components\TimePicker::make('end_time')
+                        ->seconds(false)
+                        ->default(function (callable $get) {
+                            try {
+                                $start = Carbon::parse($get('start_time'));
+                                $duration = (int) $get('duration');
+                                return $start->copy()->addMinutes($duration);
+                            } catch (\Exception $e) {
+                                return null;
+                            }
+                        })
+                        ->reactive()
+                        ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                            $start = Carbon::parse($get('start_time'));
+                            $end   = Carbon::parse($state);
+
+                            if ($end->lessThanOrEqualTo($start)) {
+                                $set('end_time', null);
+                                    Notification::make()
+                                    ->danger()
+                                    ->title('End time must be greater than start time.')
+                                    ->send();
+                            } else {
+                                self::updateAvailableRooms($set, $get);
+                            }
+                        })
+                        ->required(),
+
+                    Forms\Components\Select::make('meeting_mode')
+                        ->options(Meeting::MEETING_MODE_SELECT)
+                        ->default('In-Person')
+                        ->required(),
+                ])
+                ->columns(5)
+                ->columnSpanFull(),
+
+                Group::make()
+                ->schema([
+                    Forms\Components\Select::make('add_attendee')
+                        ->label('Attendees Emails')
+                        ->multiple()
+                        ->relationship('addAttendee', 'email')
+                        ->searchable()
+                        ->preload()
+                        ->placeholder('Enter attendee emails and press enter'),
+
+                    Forms\Components\Select::make('rooms_id')
+                        ->label('Conference Room')
+                        ->options(fn (callable $get) => self::getAvailableRooms($get))
+                        ->searchable()
+                        ->preload()
+                        ->required(),
+
+                ])
+                ->columns(2)
+                ->columnSpanFull(),
+
+                    Forms\Components\Textarea::make('description')
+                        ->columnSpanFull(),
+
+                    // Forms\Components\Toggle::make('add_meet_link')
+                    //     ->label('Generate Meet Link?')
+                    //     ->default(false),
+
+                    Hidden::make('created_by_id')
+                        ->default(fn () => Auth::id()),
+
+                ]);
+            }
+
+    public static function updateEndTimeAndRooms(callable $set, callable $get): void
+    {
+        try {
+            $start = Carbon::parse($get('start_time'));
+            $duration = (int) $get('duration');
+            $set('end_time', $start->copy()->addMinutes($duration)->format('H:i'));
+        } catch (\Exception $e) {}
+
+        self::updateAvailableRooms($set, $get);
+    }
+
+    public static function updateAvailableRooms(callable $set, callable $get): void
+    {
+        $set('rooms_id', null); // reset selected
+    }
+
+    public static function getAvailableRooms(callable $get): array
+    {
+        if (!$get('date') || !$get('start_time') || !$get('end_time')) {
+            return ConferenceRoom::pluck('name', 'id')->toArray();
+        }
+
+        $date = Carbon::parse($get('date'))->toDateString();
+        $start = Carbon::parse($get('start_time'))->toTimeString();
+        $end = Carbon::parse($get('end_time'))->toTimeString();
+
+        return ConferenceRoom::with('buildingArea')
+            ->whereDoesntHave('meeting', function ($query) use ($date, $start, $end) {
+                $query->whereDate('date', $date)
+                    ->where(function ($q) use ($start, $end) {
+                        $q->where(function ($q1) use ($start, $end) {
+                            $q1->whereTime('start_time', '<', $end)
+                                ->whereTime('end_time', '>', $start);
+                        });
+                    });
+            })
+            ->pluck('name', 'id')
+            ->toArray();
+    }
+
+    protected function afterCreate(): void
+    {
+        /** @var \App\Models\Meeting $meeting */
+        $meeting = $this->record;
+
+        // Recalculate duration from start/end
+        try {
+            $start = Carbon::parse($meeting->start_time);
+            $end = Carbon::parse($meeting->end_time);
+            $meeting->duration = $start->diffInMinutes($end);
+            $meeting->save();
+        } catch (\Exception $e) {
+            // ignore parse errors
+        }
+
+        // Create MeetingMinute
+        $meetingMinute = MeetingMinute::create([
+            'name' => $meeting->name,
+            'date' => $meeting->date,
+            'start_time' => $meeting->start_time,
+            'duration' => $meeting->duration,
+            'end_time' => $meeting->end_time,
+            'called_by_id' => Auth::id(),
+            'rooms_id' => $meeting->rooms_id,
+            'meeting_mode' => $meeting->meeting_mode,
+            'meeting_id' => $meeting->id,
+        ]);
+
+        // Sync attendees (add_attendee was converted to IDs in mutateFormDataBeforeCreate)
+        $attendeeIds = $meeting->add_attendee ?? [];
+        if (! empty($attendeeIds)) {
+            // sanitize
+            $attendeeIds = array_map('intval', array_values(array_filter($attendeeIds, fn($v) => is_numeric($v))));
+            $attendeeIds = array_unique($attendeeIds);
+
+            $meeting->addAttendee()->sync($attendeeIds);
+            $meetingMinute->present()->sync($attendeeIds);
+
+            // send invitations
+            // send invitations
+            $recipientEmails = [];
+
+            // Host
+            $recipientEmails[] = $meeting->host->email;
+
+            // Attendees
+            $recipientEmails = array_merge(
+                $recipientEmails,
+                Attendee::whereIn('id', $attendeeIds)->pluck('email')->toArray()
+            );
+
+            $recipientEmails = array_unique(array_filter($recipientEmails));
+
+            if (! empty($recipientEmails)) {
+                Mail::to($recipientEmails)->send(new MeetingInviteWithICS($meeting));
+            }
+        }
+
+        $this->redirectRoute('filament.resources.meetings.index');
+    }
+
+}
