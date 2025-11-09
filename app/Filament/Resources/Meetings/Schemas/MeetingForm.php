@@ -216,34 +216,32 @@ class MeetingForm
 
         // Sync attendees (add_attendee was converted to IDs in mutateFormDataBeforeCreate)
         $attendeeIds = $meeting->add_attendee ?? [];
-        if (! empty($attendeeIds)) {
-            // sanitize
-            $attendeeIds = array_map('intval', array_values(array_filter($attendeeIds, fn($v) => is_numeric($v))));
-            $attendeeIds = array_unique($attendeeIds);
+        $attendeeIds = array_map('intval', array_values($attendeeIds));
 
+        // Add Host as attendee automatically
+        if ($meeting->created_by_id) {
+            $hostAttendee = Attendee::firstOrCreate(
+                ['email' => $meeting->host->email],
+                ['name' => $meeting->host->name]
+            );
+
+            $attendeeIds[] = $hostAttendee->id;
+        }
+
+        $attendeeIds = array_unique($attendeeIds);
+
+        if (! empty($attendeeIds)) {
             $meeting->addAttendee()->sync($attendeeIds);
             $meetingMinute->present()->sync($attendeeIds);
 
             // send invitations
-            // send invitations
-            $recipientEmails = [];
-
-            // Host
-            $recipientEmails[] = $meeting->host->email;
-
-            // Attendees
-            $recipientEmails = array_merge(
-                $recipientEmails,
-                Attendee::whereIn('id', $attendeeIds)->pluck('email')->toArray()
-            );
-
+            $recipientEmails = Attendee::whereIn('id', $attendeeIds)->pluck('email')->toArray();
             $recipientEmails = array_unique(array_filter($recipientEmails));
 
             if (! empty($recipientEmails)) {
                 Mail::to($recipientEmails)->send(new MeetingInviteWithICS($meeting));
             }
         }
-
         $this->redirectRoute('filament.resources.meetings.index');
     }
 
