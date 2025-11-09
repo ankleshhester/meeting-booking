@@ -21,6 +21,7 @@ use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 use App\Http\Middleware\RedirectUnapprovedUsers;
 use App\Filament\Pages\Auth\Register;
+use App\Filament\Pages\CustomDashboard;
 
 class AdminPanelProvider extends PanelProvider
 {

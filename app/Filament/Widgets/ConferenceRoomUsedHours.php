@@ -12,6 +12,7 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 use Illuminate\Database\Eloquent\Builder;
 use App\Models\ConferenceRoom as Conference;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 
 class ConferenceRoomUsedHours extends TableWidget
@@ -19,6 +20,12 @@ class ConferenceRoomUsedHours extends TableWidget
     protected static ?string $heading = 'Conferences Rooms by Usage Hours';
 
     protected int|string $defaultTableRecordsPerPage = 10;
+
+    public static function canView(): bool
+    {
+        // Adjust the role check here if your admin role is named differently (e.g., 'admin')
+        return Auth::user()?->hasRole('super_admin') ?? false;
+    }
 
     public function table(Table $table): Table
     {

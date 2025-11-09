@@ -15,12 +15,19 @@ use pxlrbt\FilamentExcel\Actions\Tables\ExportAction;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class TopAttendeeHours extends TableWidget
 {
     protected static ?string $heading = 'Attendees by Meeting Hours';
 
     protected int | string $defaultTableRecordsPerPage = 20;
+
+    public static function canView(): bool
+    {
+        // Adjust the role check here if your admin role is named differently (e.g., 'admin')
+        return Auth::user()?->hasRole('super_admin') ?? false;
+    }
 
     public function table(Table $table): Table
     {
