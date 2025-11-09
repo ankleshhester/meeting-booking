@@ -100,7 +100,7 @@ class MeetingInviteWithICS extends Mailable
             . "END:VCALENDAR\r\n";
 
         return $this
-            ->view('emails.meeting-invitation') // Your Blade view for the email body
+            ->view('emails.meeting_invite') // Your Blade view for the email body
             ->with([
                 'meeting' => $meeting,
             ])
