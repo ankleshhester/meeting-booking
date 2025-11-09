@@ -7,6 +7,8 @@
 Start: {{ $meeting->start_time }}<br>
 End: {{ $meeting->end_time }}</p>
 
+<p>Organizer: {{ $meeting->host->name }} ({{ $meeting->host->email }})</p>
+
 <p>Location: {{ $meeting->rooms->name }}</p>
 
 <p>Attached calendar invite has been included.</p>

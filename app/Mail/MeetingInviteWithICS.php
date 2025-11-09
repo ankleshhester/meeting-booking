@@ -2,61 +2,114 @@
 
 namespace App\Mail;
 
-use App\Models\Meeting;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Content;
+use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use App\Models\Meeting;
 use Carbon\Carbon;
 
 class MeetingInviteWithICS extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public Meeting $meeting;
+    public $meeting;
 
+    /**
+     * Create a new message instance.
+     */
     public function __construct(Meeting $meeting)
     {
         $this->meeting = $meeting;
     }
 
+    /**
+     * Get the message envelope.
+     */
+    public function envelope(): Envelope
+    {
+        return new Envelope(
+            subject: 'Meeting Invitation: ' . $this->meeting->name,
+        );
+    }
+
+    /**
+     * Build the message.
+     */
     public function build()
     {
         $meeting = $this->meeting;
 
-        $startDateTime = Carbon::parse($meeting->date); // Start with the correct meeting date
-        $startTime = Carbon::parse($meeting->start_time); // Parse the time component
+        // 🛑 FIX: Correctly parse the date and time to prevent "Double date specification" error
+        // 1. Get the date component (YYYY-MM-DD)
+        $startDateTime = Carbon::parse($meeting->date);
 
+        // 2. Get the time component (HH:MM:SS)
+        $startTime = Carbon::parse($meeting->start_time);
+
+        // 3. Combine them: set the hour/minute/second of the date to the time component
         $startDateTime->setTime($startTime->hour, $startTime->minute, $startTime->second);
 
-        $start = $startDateTime->format('Ymd\THis');
+        // Format DTSTART for the ICS file
+        $dtStart = $startDateTime->format('Ymd\THis');
 
-        $endTime = Carbon::parse($meeting->end_time);
-        $endDateTime = Carbon::parse($meeting->date); // Start with the correct meeting date
-        $endDateTime->setTime($endTime->hour, $endTime->minute, $endTime->second);
+        // Calculate DTEND by adding duration to DTSTART
+        $endDateTime = $startDateTime->copy()->addMinutes($meeting->duration);
+        $dtEnd = $endDateTime->format('Ymd\THis');
 
-        $end = $endDateTime->format('Ymd\THis');
+        // Format DTSTAMP
+        $dtStamp = now()->setTimezone('UTC')->format('Ymd\THis\Z');
 
-        $ics = "BEGIN:VCALENDAR
-            VERSION:2.0
-            PRODID:-//Hester//Meeting Calendar//EN
-            CALSCALE:GREGORIAN
-            METHOD:REQUEST
-            BEGIN:VEVENT
-            UID:" . uniqid() . "
-            DTSTAMP:{$start}
-            DTSTART:{$start}
-            DTEND:{$end}
-            SUMMARY:{$meeting->name}
-            DESCRIPTION:" . addslashes($meeting->description ?? '') . "
-            LOCATION:" . ($meeting->room?->name ?? 'Online') . "
-            ORGANIZER;CN=" . $meeting->host?->name . ":mailto:" . $meeting->host?->email . "
-            END:VEVENT
-            END:VCALENDAR";
+        $hostName = str_replace(['\\', ',', ';'], ['\\\\', '\,', '\;'], $meeting->host->name);
 
-        return $this->subject('Meeting Invitation: ' . $meeting->name)
-            ->view('emails.meeting_invite')
-            ->attachData($ics, 'meeting.ics', [
-                'mime' => 'text/calendar; charset=utf-8; method=REQUEST',
-            ]);
+        // 🔑 FIX: Generate the attendee list using standard PHP concatenation
+        $attendeeList = '';
+
+        // Add Host as an explicit attendee
+        $attendeeList .= "ATTENDEE;CN={$hostName};RSVP=TRUE:mailto:{$meeting->host->email}\r\n";
+
+        // Add other attendees
+        foreach ($meeting->addAttendee as $attendee) {
+            $name = str_replace(['\\', ',', ';'], ['\\\\', '\,', '\;'], $attendee->name ?? $attendee->email);
+            $attendeeList .= "ATTENDEE;CN={$name};RSVP=TRUE:mailto:{$attendee->email}\r\n";
+        }
+
+        // Build the ICS content string
+        $icsContent = "BEGIN:VCALENDAR\r\n"
+            . "VERSION:2.0\r\n"
+            . "PRODID:-//Your Company//Meeting Scheduler//EN\r\n"
+            . "CALSCALE:GREGORIAN\r\n"
+            . "METHOD:REQUEST\r\n"
+            . "BEGIN:VEVENT\r\n"
+            . "DTSTART:{$dtStart}\r\n"
+            . "DTEND:{$dtEnd}\r\n"
+            . "DTSTAMP:{$dtStamp}\r\n"
+            . "UID:{$meeting->id}@yourdomain.com\r\n"
+            . "CREATED:{$meeting->created_at->format('Ymd\THis\Z')}\r\n"
+            . "DESCRIPTION:{$meeting->description}\r\n"
+            . "LAST-MODIFIED:{$dtStamp}\r\n"
+            . "LOCATION:{$meeting->rooms->name}\r\n"
+            . "SEQUENCE:0\r\n"
+            . "STATUS:CONFIRMED\r\n"
+            . "SUMMARY:{$meeting->name}\r\n"
+            . "TRANSP:OPAQUE\r\n"
+            . "ORGANIZER;CN={$hostName}:mailto:{$meeting->host->email}\r\n"
+            . $attendeeList // Inject the PHP-generated attendee list
+            . "END:VEVENT\r\n"
+            . "END:VCALENDAR\r\n";
+
+        return $this
+            ->view('emails.meeting-invitation') // Your Blade view for the email body
+            ->with([
+                'meeting' => $meeting,
+            ])
+            ->attachData(
+                $icsContent,
+                'invite.ics',
+                [
+                    'mime' => 'text/calendar', // Crucial for automatic calendar detection
+                ]
+            );
     }
 }
