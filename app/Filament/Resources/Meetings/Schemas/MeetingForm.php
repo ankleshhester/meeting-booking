@@ -114,6 +114,16 @@ class MeetingForm
 
                 Group::make()
                 ->schema([
+
+                    Forms\Components\Select::make('created_by_id')
+                        ->relationship('createdBy', 'name') // or 'email', whichever you prefer
+                        ->label('Organizer')
+                        ->searchable()
+                        ->preload()
+                        ->default(fn () => Auth::id())
+                        ->disabled()
+                        ->required(),
+
                     Forms\Components\Select::make('add_attendee')
                         ->label('Attendees Emails')
                         ->multiple()
@@ -130,7 +140,7 @@ class MeetingForm
                         ->required(),
 
                 ])
-                ->columns(2)
+                ->columns(3)
                 ->columnSpanFull(),
 
                     Forms\Components\Textarea::make('description')
