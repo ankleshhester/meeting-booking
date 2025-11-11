@@ -25,6 +25,7 @@ use Filament\Schemas\Components\Form;
 use Filament\Schemas\Components\Group;
 use App\Mail\MeetingInviteWithICS;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\FileUpload;
 
 class MeetingForm
 {
@@ -144,7 +145,16 @@ class MeetingForm
                 ->columnSpanFull(),
 
                     Forms\Components\Textarea::make('description')
+                        ->label('Meeting Description')
                         ->columnSpanFull(),
+
+                    FileUpload::make('attachments')
+                        ->label('Attachments')
+                        ->multiple()
+                        ->downloadable()
+                        ->openable()
+                        ->directory('meeting_attachments')
+                        ->preserveFilenames(),
 
                     // Forms\Components\Toggle::make('add_meet_link')
                     //     ->label('Generate Meet Link?')

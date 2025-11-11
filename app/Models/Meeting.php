@@ -18,6 +18,7 @@ class Meeting extends Model
         'add_meet_link' => 'boolean',
         'start_time' => 'datetime',
         'end_time'   => 'datetime',
+        'attachments' => 'array',
     ];
 
     protected $dates = [
