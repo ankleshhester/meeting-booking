@@ -153,6 +153,7 @@ class MeetingForm
                         ->multiple()
                         ->downloadable()
                         ->openable()
+                        ->default(fn ($record) => $record?->attachments)
                         ->directory('meeting_attachments')
                         ->preserveFilenames(),
 

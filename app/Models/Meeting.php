@@ -75,6 +75,7 @@ class Meeting extends Model
         'rooms_id',
         'meeting_mode',
         'created_by_id',
+        'attachments',
     ];
 
     public const DURATION_SELECT = [
