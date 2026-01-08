@@ -37,22 +37,26 @@ class EmployeeCostReport extends Page implements HasTable
 
        return $table
             ->query(
-                EmployeeCostMaster::query()
-                    ->join(
-                        'attendees',
-                        DB::raw('LOWER(attendees.email)'),
-                        '=',
-                        DB::raw('LOWER(employee_cost_masters.email)')
-                    )
+                // Start from Attendees to ensure every meeting participant is included
+                \App\Models\Attendee::query()
                     ->join('attendee_meeting', 'attendee_meeting.attendee_id', '=', 'attendees.id')
                     ->join('meetings', 'meetings.id', '=', 'attendee_meeting.meeting_id')
+                    // Use leftJoin so if email doesn't exist in cost master, the attendee is still kept
+                    ->leftJoin('employee_cost_masters', function ($join) {
+                        $join->on(
+                            DB::raw('LOWER(employee_cost_masters.email)'),
+                            '=',
+                            DB::raw('LOWER(attendees.email)')
+                        );
+                    })
                     ->select([
-                        // REQUIRED unique key
-                        DB::raw('CONCAT(employee_cost_masters.id, "-", meetings.id) as id'),
-                        'employee_cost_masters.email as employee_email',
+                        // Use a unique ID for Filament's internal tracking
+                        DB::raw('CONCAT(attendees.id, "-", meetings.id) as id'),
+                        'attendees.email as employee_email',
                         'meetings.name as meeting_title',
                         'meetings.date as meeting_date',
                         DB::raw('(meetings.duration / 60) as duration_hours'),
+                        // If cost_per_hour is null, total_cost will naturally be null (blank in report)
                         DB::raw('((meetings.duration / 60) * employee_cost_masters.cost_per_hour) as total_cost'),
                     ])
             )
