@@ -31,23 +31,28 @@ class MeetingCostReport extends Page implements HasTable
     {
         return $table
             ->query(
-                // We start from the meetings table
                 \App\Models\Meeting::query()
                     ->join('attendee_meeting', 'meetings.id', '=', 'attendee_meeting.meeting_id')
                     ->join('attendees', 'attendees.id', '=', 'attendee_meeting.attendee_id')
-                    // Join with cost master to get the hourly rate of each attendee
-                    ->join('employee_cost_masters', function ($join) {
-                        $join->on(DB::raw('LOWER(attendees.email)'), '=', DB::raw('LOWER(employee_cost_masters.email)'));
+                    // Change to leftJoin to keep the meeting/attendee even if cost is missing
+                    ->leftJoin('employee_cost_masters', function ($join) {
+                        $join->on(
+                            DB::raw('LOWER(attendees.email)'),
+                            '=',
+                            DB::raw('LOWER(employee_cost_masters.email)')
+                        );
                     })
                     ->select([
                         'meetings.id',
                         'meetings.name as meeting_title',
                         'meetings.date as meeting_date',
                         DB::raw('MAX(meetings.duration / 60) as duration_hours'),
-                        // SUM the cost of ALL attendees for this specific meeting
-                        DB::raw('SUM((meetings.duration / 60) * employee_cost_masters.cost_per_hour) as total_meeting_cost'),
-                        // Count participants who have a cost record
-                        DB::raw('COUNT(attendees.id) as participant_count')
+                        // coalesce handles cases where cost is null so the sum doesn't break
+                        DB::raw('SUM((meetings.duration / 60) * COALESCE(employee_cost_masters.cost_per_hour, 0)) as total_meeting_cost'),
+                        // Count total participants regardless of cost availability
+                        DB::raw('COUNT(attendees.id) as participant_count'),
+                        // Optional: count how many actually had a cost assigned
+                        DB::raw('COUNT(employee_cost_masters.email) as participants_with_cost')
                     ])
                     ->groupBy('meetings.id', 'meetings.name', 'meetings.date')
             )
@@ -109,20 +114,22 @@ class MeetingCostReport extends Page implements HasTable
     }
 
     public function getAttendeeBreakdown($meetingId)
-    {
-        return DB::table('attendee_meeting')
-            ->join('attendees', 'attendees.id', '=', 'attendee_meeting.attendee_id')
-            ->join('employee_cost_masters', function ($join) {
-                $join->on(DB::raw('LOWER(attendees.email)'), '=', DB::raw('LOWER(employee_cost_masters.email)'));
-            })
-            ->join('meetings', 'meetings.id', '=', 'attendee_meeting.meeting_id')
-            ->where('meetings.id', $meetingId)
-            ->select([
-                'attendees.email',
-                'employee_cost_masters.cost_per_hour',
-                DB::raw('(meetings.duration / 60) as hours'),
-                DB::raw('((meetings.duration / 60) * employee_cost_masters.cost_per_hour) as individual_cost'),
-            ])
-            ->get();
-    }
+{
+    return DB::table('attendees')
+        ->join('attendee_meeting', 'attendees.id', '=', 'attendee_meeting.attendee_id')
+        ->join('meetings', 'meetings.id', '=', 'attendee_meeting.meeting_id')
+        // Use leftJoin so attendees show up even if not in cost master
+        ->leftJoin('employee_cost_masters', function ($join) {
+            $join->on(DB::raw('LOWER(attendees.email)'), '=', DB::raw('LOWER(employee_cost_masters.email)'));
+        })
+        ->where('meetings.id', $meetingId)
+        ->select([
+            'attendees.email',
+            'employee_cost_masters.cost_per_hour', // This will be NULL if no match
+            DB::raw('(meetings.duration / 60) as hours'),
+            // Total cost will be NULL if cost_per_hour is missing
+            DB::raw('((meetings.duration / 60) * employee_cost_masters.cost_per_hour) as individual_cost'),
+        ])
+        ->get();
+}
 }
