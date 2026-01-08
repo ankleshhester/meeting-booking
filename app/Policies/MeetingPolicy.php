@@ -4,14 +4,14 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use Illuminate\Foundation\Auth\User as AuthUser;
 use App\Models\Meeting;
+use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class MeetingPolicy
 {
     use HandlesAuthorization;
-    
+
     public function viewAny(AuthUser $authUser): bool
     {
         return $authUser->can('ViewAny:Meeting');
@@ -19,7 +19,15 @@ class MeetingPolicy
 
     public function view(AuthUser $authUser, Meeting $meeting): bool
     {
-        return $authUser->can('View:Meeting');
+        // 1️⃣ Admin / permission-based access
+        if ($authUser->can('View:Meeting')) {
+            return true;
+        }
+
+        // 2️⃣ Attendee-based access (EMAIL MATCH)
+        return $meeting->addAttendee()
+            ->whereRaw('LOWER(attendees.email) = ?', [strtolower($authUser->email)])
+            ->exists();
     }
 
     public function create(AuthUser $authUser): bool
@@ -66,5 +74,4 @@ class MeetingPolicy
     {
         return $authUser->can('Reorder:Meeting');
     }
-
 }
