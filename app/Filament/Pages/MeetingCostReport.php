@@ -17,6 +17,10 @@ use Filament\Actions\Action;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Infolist;
 use Filament\Facades\Filament;
+use Illuminate\Database\Eloquent\Builder;
+use Filament\Tables\Filters\Filter;
+use Filament\Forms\Components\DatePicker;
+use Carbon\Carbon;
 
 class MeetingCostReport extends Page implements HasTable
 {
@@ -40,7 +44,8 @@ class MeetingCostReport extends Page implements HasTable
                 \App\Models\Meeting::query()
                     ->join('attendee_meeting', 'meetings.id', '=', 'attendee_meeting.meeting_id')
                     ->join('attendees', 'attendees.id', '=', 'attendee_meeting.attendee_id')
-                    // Change to leftJoin to keep the meeting/attendee even if cost is missing
+
+                    // Keep meeting/attendee even if cost is missing
                     ->leftJoin('employee_cost_masters', function ($join) {
                         $join->on(
                             DB::raw('LOWER(attendees.email)'),
@@ -48,19 +53,35 @@ class MeetingCostReport extends Page implements HasTable
                             DB::raw('LOWER(employee_cost_masters.email)')
                         );
                     })
+
                     ->select([
                         'meetings.id',
                         'meetings.name as meeting_title',
                         'meetings.date as meeting_date',
+
+                        // duration in hours (same for all rows of the meeting)
                         DB::raw('MAX(meetings.duration / 60) as duration_hours'),
-                        // coalesce handles cases where cost is null so the sum doesn't break
-                        DB::raw('SUM((meetings.duration / 60) * COALESCE(employee_cost_masters.cost_per_hour, 0)) as total_meeting_cost'),
-                        // Count total participants regardless of cost availability
+
+                        // ✅ TOTAL MEETING COST (CTC / 2500 × hours × attendees)
+                        DB::raw('
+                            SUM(
+                                (meetings.duration / 60)
+                                * COALESCE(employee_cost_masters.cost_per_hour, 0)
+                                / 2500
+                            ) as total_meeting_cost
+                        '),
+
+                        // total participants
                         DB::raw('COUNT(attendees.id) as participant_count'),
-                        // Optional: count how many actually had a cost assigned
-                        DB::raw('COUNT(employee_cost_masters.email) as participants_with_cost')
+
+                        // participants having CTC defined
+                        DB::raw('COUNT(employee_cost_masters.email) as participants_with_cost'),
                     ])
-                    ->groupBy('meetings.id', 'meetings.name', 'meetings.date')
+                    ->groupBy(
+                        'meetings.id',
+                        'meetings.name',
+                        'meetings.date'
+                    )
             )
             ->columns([
                 TextColumn::make('meeting_date')
@@ -90,7 +111,7 @@ class MeetingCostReport extends Page implements HasTable
             ])
             ->actions([
                 Action::make('view_attendees')
-                    ->label('View Breakdown')
+                    ->label('View Details')
                     ->icon('heroicon-m-users')
                     ->color('gray')
                     ->modalHeading(fn ($record) => "Attendee Breakdown: {$record->meeting_title}")
@@ -98,6 +119,25 @@ class MeetingCostReport extends Page implements HasTable
                     ->modalContent(fn ($record) => view('filament.pages.actions.meeting-attendees', [
                         'attendees' => $this->getAttendeeBreakdown($record->id),
                     ])),
+            ])
+            ->filters([
+                Filter::make('meeting_date')
+                    ->form([
+                        DatePicker::make('from')->label('From Date'),
+                        DatePicker::make('until')->label('To Date'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['from'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('meetings.date', '>=', $date),
+                            )
+                            ->when(
+                                $data['until'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('meetings.date', '<=', $date),
+                            );
+                    }),
+
             ])
             ->headerActions([
                 ExportAction::make()
@@ -120,22 +160,42 @@ class MeetingCostReport extends Page implements HasTable
     }
 
     public function getAttendeeBreakdown($meetingId)
-{
-    return DB::table('attendees')
-        ->join('attendee_meeting', 'attendees.id', '=', 'attendee_meeting.attendee_id')
-        ->join('meetings', 'meetings.id', '=', 'attendee_meeting.meeting_id')
-        // Use leftJoin so attendees show up even if not in cost master
-        ->leftJoin('employee_cost_masters', function ($join) {
-            $join->on(DB::raw('LOWER(attendees.email)'), '=', DB::raw('LOWER(employee_cost_masters.email)'));
-        })
-        ->where('meetings.id', $meetingId)
-        ->select([
-            'attendees.email',
-            'employee_cost_masters.cost_per_hour', // This will be NULL if no match
-            DB::raw('(meetings.duration / 60) as hours'),
-            // Total cost will be NULL if cost_per_hour is missing
-            DB::raw('((meetings.duration / 60) * employee_cost_masters.cost_per_hour) as individual_cost'),
-        ])
-        ->get();
-}
+    {
+        return DB::table('attendees')
+            ->join('attendee_meeting', 'attendees.id', '=', 'attendee_meeting.attendee_id')
+            ->join('meetings', 'meetings.id', '=', 'attendee_meeting.meeting_id')
+
+            // Keep attendee even if no cost master entry exists
+            ->leftJoin('employee_cost_masters', function ($join) {
+                $join->on(
+                    DB::raw('LOWER(attendees.email)'),
+                    '=',
+                    DB::raw('LOWER(employee_cost_masters.email)')
+                );
+            })
+
+            ->where('meetings.id', $meetingId)
+
+            ->select([
+                'attendees.email',
+
+                // Raw CTC (optional, useful for debugging / display)
+                'employee_cost_masters.cost_per_hour as ctc',
+
+                // Meeting duration in hours
+                DB::raw('(meetings.duration / 60) as hours'),
+
+                // Hourly cost derived from CTC
+                DB::raw('(employee_cost_masters.cost_per_hour / 2500) as hourly_cost'),
+
+                // ✅ Individual attendee cost (hours × hourly cost)
+                DB::raw('
+                    (meetings.duration / 60)
+                    * (employee_cost_masters.cost_per_hour / 2500)
+                    as individual_cost
+                '),
+            ])
+            ->get();
+    }
+
 }

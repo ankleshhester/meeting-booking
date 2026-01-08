@@ -55,15 +55,26 @@ class EmployeeCostReport extends Page implements HasTable
                             DB::raw('LOWER(attendees.email)')
                         );
                     })
-                    ->select([
-                        // Use a unique ID for Filament's internal tracking
+                     ->select([
+                        // Required unique key for Filament
                         DB::raw('CONCAT(attendees.id, "-", meetings.id) as id'),
+
                         'attendees.email as employee_email',
                         'meetings.name as meeting_title',
                         'meetings.date as meeting_date',
+
+                        // Duration in hours
                         DB::raw('(meetings.duration / 60) as duration_hours'),
-                        // If cost_per_hour is null, total_cost will naturally be null (blank in report)
-                        DB::raw('((meetings.duration / 60) * employee_cost_masters.cost_per_hour) as total_cost'),
+
+                        // Hourly cost derived from CTC
+                        DB::raw('(employee_cost_masters.cost_per_hour / 2500) as hourly_cost'),
+
+                        // Total meeting cost
+                        DB::raw('
+                            (meetings.duration / 60)
+                            * (employee_cost_masters.cost_per_hour / 2500)
+                            as total_cost
+                        '),
                     ])
             )
             ->columns([
