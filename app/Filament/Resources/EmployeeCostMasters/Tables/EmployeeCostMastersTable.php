@@ -24,6 +24,7 @@ class EmployeeCostMastersTable
                 TextColumn::make('email')
                     ->searchable(),
                 TextColumn::make('cost_per_hour')
+                    ->label('CTC')
                     ->numeric()
                     ->sortable(),
                 TextColumn::make('created_at')
