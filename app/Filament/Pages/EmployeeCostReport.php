@@ -25,6 +25,12 @@ class EmployeeCostReport extends Page implements HasTable
 {
     use InteractsWithTable;
 
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('View:EmployeeCostReport');
+    }
+
+
     protected static ?string $navigationLabel = 'Employee Cost Report';
     // protected static ?string $navigationGroup = 'Reports';
 

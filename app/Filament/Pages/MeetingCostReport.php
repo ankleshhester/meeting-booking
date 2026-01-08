@@ -16,10 +16,16 @@ use pxlrbt\FilamentExcel\Columns\Column as ExcelColumn;
 use Filament\Actions\Action;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Infolists\Infolist;
+use Filament\Facades\Filament;
 
 class MeetingCostReport extends Page implements HasTable
 {
     use InteractsWithTable;
+
+    public static function canAccess(): bool
+    {
+        return auth()->user()?->can('View:MeetingCostReport');
+    }
 
     protected static ?string $navigationLabel = 'Meeting Cost Report';
 
