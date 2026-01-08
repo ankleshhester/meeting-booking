@@ -26,7 +26,7 @@ class EmployeeCostMasterImporter extends Importer
                 ->example('employee@example.com'),
 
             ImportColumn::make('cost_per_hour')
-                ->label('Cost Per Hour')
+                ->label('CTC')
                 ->rules(['required', 'numeric', 'min:0'])
                 ->example('500.00'),
         ];
