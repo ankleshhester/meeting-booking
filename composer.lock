@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "680d315b1867f6017b98c431476dc952",
+    "content-hash": "f7fdc9f2bc566b88937515cbf72a8bae",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -5803,16 +5803,16 @@
         },
         {
             "name": "pxlrbt/filament-excel",
-            "version": "v3.2.0",
+            "version": "v3.3.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/pxlrbt/filament-excel.git",
-                "reference": "dd36e120774080fa23a35494dbbed18d8710c6b0"
+                "reference": "caff9f55d58cb9c103c4f3fc3be5e092e8eebd1c"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/pxlrbt/filament-excel/zipball/dd36e120774080fa23a35494dbbed18d8710c6b0",
-                "reference": "dd36e120774080fa23a35494dbbed18d8710c6b0",
+                "url": "https://api.github.com/repos/pxlrbt/filament-excel/zipball/caff9f55d58cb9c103c4f3fc3be5e092e8eebd1c",
+                "reference": "caff9f55d58cb9c103c4f3fc3be5e092e8eebd1c",
                 "shasum": ""
             },
             "require": {
@@ -5858,7 +5858,7 @@
             ],
             "support": {
                 "issues": "https://github.com/pxlrbt/filament-excel/issues",
-                "source": "https://github.com/pxlrbt/filament-excel/tree/v3.2.0"
+                "source": "https://github.com/pxlrbt/filament-excel/tree/v3.3.0"
             },
             "funding": [
                 {
@@ -5866,7 +5866,7 @@
                     "type": "github"
                 }
             ],
-            "time": "2025-11-05T12:52:53+00:00"
+            "time": "2025-12-07T19:37:21+00:00"
         },
         {
             "name": "ralouphie/getallheaders",

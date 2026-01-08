@@ -14,7 +14,7 @@
         "laravel/tinker": "^2.10.1",
         "livewire/flux": "^2.1.1",
         "livewire/volt": "^1.7.0",
-        "pxlrbt/filament-excel": "^3.2",
+        "pxlrbt/filament-excel": "^3.3",
         "spatie/laravel-permission": "^6.23"
     },
     "require-dev": {

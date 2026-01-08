@@ -16,6 +16,7 @@ class EmployeeCostMaster extends Model
 
     protected $fillable = [
         'emp_code',
+        'email',
         'cost_per_hour',
     ];
 
@@ -37,25 +38,6 @@ class EmployeeCostMaster extends Model
         'deleted_at',
     ];
 
-    protected function serializeDate(DateTimeInterface $date)
-    {
-        return $date->format('Y-m-d H:i:s');
-    }
-
-    public function getCreatedAtAttribute($value)
-    {
-        return $value ? Carbon::createFromFormat('Y-m-d H:i:s', $value)->format(config('project.datetime_format')) : null;
-    }
-
-    public function getUpdatedAtAttribute($value)
-    {
-        return $value ? Carbon::createFromFormat('Y-m-d H:i:s', $value)->format(config('project.datetime_format')) : null;
-    }
-
-    public function getDeletedAtAttribute($value)
-    {
-        return $value ? Carbon::createFromFormat('Y-m-d H:i:s', $value)->format(config('project.datetime_format')) : null;
-    }
 
     public function owner()
     {

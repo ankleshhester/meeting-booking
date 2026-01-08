@@ -88,6 +88,7 @@ class MeetingForm
                                 return null;
                             }
                         })
+                        ->readOnly()
                         ->reactive()
                         ->afterStateUpdated(function ($state, callable $set, callable $get) {
                             $start = Carbon::parse($get('start_time'));
@@ -105,10 +106,10 @@ class MeetingForm
                         })
                         ->required(),
 
-                    Forms\Components\Select::make('meeting_mode')
-                        ->options(Meeting::MEETING_MODE_SELECT)
-                        ->default('In-Person')
-                        ->required(),
+                    // Forms\Components\Select::make('meeting_mode')
+                    //     ->options(Meeting::MEETING_MODE_SELECT)
+                    //     ->default('In-Person')
+                    //     ->required(),
                 ])
                 ->columns(5)
                 ->columnSpanFull(),
