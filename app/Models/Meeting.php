@@ -85,7 +85,9 @@ class Meeting extends Model
         '60'  => '1 hours',
         '90'  => '1.5 hour',
         '120' => '2 hours',
+        '160' => '2.5 hours',
         '180' => '3 hours',
+        '210' => '3.5 hours',
         '240' => '4 hours',
     ];
 
