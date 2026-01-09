@@ -33,6 +33,8 @@ class MeetingCostReport extends Page implements HasTable
 
     protected static ?string $navigationLabel = 'Meeting Cost Report';
 
+    protected static ?int $navigationSort = 1;
+
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-chart-bar';
 
     protected string $view = 'filament.pages.meeting-cost-report';

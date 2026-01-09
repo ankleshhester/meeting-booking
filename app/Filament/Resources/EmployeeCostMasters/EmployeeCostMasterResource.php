@@ -24,6 +24,8 @@ class EmployeeCostMasterResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'EmployeeCostMaster';
 
+    protected static ?int $navigationSort = 4;
+
     public static function form(Schema $schema): Schema
     {
         return EmployeeCostMasterForm::configure($schema);
