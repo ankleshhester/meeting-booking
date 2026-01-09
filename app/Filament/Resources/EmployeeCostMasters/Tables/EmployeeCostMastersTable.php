@@ -39,9 +39,6 @@ class EmployeeCostMastersTable
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('owner_id')
-                    ->numeric()
-                    ->sortable(),
             ])
             ->filters([
                 TrashedFilter::make(),
