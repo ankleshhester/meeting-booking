@@ -55,7 +55,7 @@ class MeetingInviteWithICS extends Mailable
         $dtStart = $startDateTime->format('Ymd\THis');
 
         // Calculate DTEND by adding duration to DTSTART
-        $endDateTime = $startDateTime->copy()->addMinutes($meeting->duration);
+        $endDateTime = $startDateTime->copy()->addMinutes((int) $meeting->duration);
         $dtEnd = $endDateTime->format('Ymd\THis');
 
         // Format DTSTAMP
