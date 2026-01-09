@@ -64,13 +64,6 @@ class MeetingsTable
                     ->sortable()
                     ->searchable(),
 
-                Tables\Columns\BadgeColumn::make('meeting_mode')
-                    ->colors([
-                        'primary' => 'Virtual',
-                        'success' => 'In-Person',
-                    ])
-                    ->label('Mode'),
-
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime(config('project.datetime_format'))
                     ->sortable(),
