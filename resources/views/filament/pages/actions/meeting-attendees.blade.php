@@ -40,7 +40,7 @@
                     <td class="px-4 py-3 text-right whitespace-nowrap
                                border-b border-r border-gray-200
                                text-gray-600 dark:border-white/5 dark:text-gray-400">
-                        ₹{{ number_format($attendee->cost_per_hour, 2) }}
+                        ₹{{ number_format($attendee->ctc, 2) }}
                     </td>
 
                     <td class="px-4 py-3 text-center whitespace-nowrap font-mono
