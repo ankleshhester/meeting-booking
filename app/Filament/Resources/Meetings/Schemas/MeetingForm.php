@@ -205,27 +205,33 @@ class MeetingForm
 
     public static function getAvailableRooms(callable $get): array
     {
-        if (!$get('date') || !$get('start_time') || !$get('end_time')) {
+        if (! $get('date') || ! $get('start_time') || ! $get('end_time')) {
             return ConferenceRoom::pluck('name', 'id')->toArray();
         }
 
-        $date = Carbon::parse($get('date'))->toDateString();
+        $date  = Carbon::parse($get('date'))->toDateString();
         $start = Carbon::parse($get('start_time'))->toTimeString();
-        $end = Carbon::parse($get('end_time'))->toTimeString();
+        $end   = Carbon::parse($get('end_time'))->toTimeString();
 
-        return ConferenceRoom::with('buildingArea')
-            ->whereDoesntHave('meeting', function ($query) use ($date, $start, $end) {
+        // 👇 CURRENT MEETING ID (NULL on create, set on edit)
+        $currentMeetingId = $get('id');
+
+        return ConferenceRoom::query()
+            ->whereDoesntHave('meeting', function ($query) use ($date, $start, $end, $currentMeetingId) {
                 $query->whereDate('date', $date)
                     ->where(function ($q) use ($start, $end) {
-                        $q->where(function ($q1) use ($start, $end) {
-                            $q1->whereTime('start_time', '<', $end)
-                                ->whereTime('end_time', '>', $start);
-                        });
+                        $q->whereTime('start_time', '<', $end)
+                        ->whereTime('end_time', '>', $start);
+                    })
+                    // ✅ EXCLUDE CURRENT MEETING
+                    ->when($currentMeetingId, function ($q) use ($currentMeetingId) {
+                        $q->where('meetings.id', '!=', $currentMeetingId);
                     });
             })
             ->pluck('name', 'id')
             ->toArray();
     }
+
 
 
 
