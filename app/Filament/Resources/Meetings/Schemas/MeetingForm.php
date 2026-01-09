@@ -181,7 +181,26 @@ class MeetingForm
 
     public static function updateAvailableRooms(callable $set, callable $get): void
     {
-        $set('rooms_id', null); // reset selected
+        $selectedRoomId = $get('rooms_id');
+
+        // No room selected yet → nothing to validate
+        if (! $selectedRoomId) {
+            return;
+        }
+
+        $availableRooms = self::getAvailableRooms($get);
+
+        // If selected room is NOT in available list → conflict
+        if (! array_key_exists($selectedRoomId, $availableRooms)) {
+            $set('rooms_id', null);
+
+            Notification::make()
+                ->danger()
+                ->title('Conference Room Unavailable')
+                ->body('The selected room is not available for the updated time slot. Please choose another room.')
+                ->persistent()
+                ->send();
+        }
     }
 
     public static function getAvailableRooms(callable $get): array
