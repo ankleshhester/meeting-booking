@@ -67,12 +67,12 @@ class EmployeeCostReport extends Page implements HasTable
                         DB::raw('(meetings.duration / 60) as duration_hours'),
 
                         // Hourly cost derived from CTC
-                        DB::raw('(employee_cost_masters.cost_per_hour / 2500) as hourly_cost'),
+                        DB::raw('(employee_cost_masters.ctc / 2500) as hourly_cost'),
 
                         // Total meeting cost
                         DB::raw('
                             (meetings.duration / 60)
-                            * (employee_cost_masters.cost_per_hour / 2500)
+                            * (employee_cost_masters.ctc / 2500)
                             as total_cost
                         '),
                     ])
@@ -131,8 +131,8 @@ class EmployeeCostReport extends Page implements HasTable
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
-                            ->when($data['min_cost'], fn ($q) => $q->whereRaw('((meetings.duration / 60) * employee_cost_masters.cost_per_hour) >= ?', [$data['min_cost']]))
-                            ->when($data['max_cost'], fn ($q) => $q->whereRaw('((meetings.duration / 60) * employee_cost_masters.cost_per_hour) <= ?', [$data['max_cost']]));
+                            ->when($data['min_cost'], fn ($q) => $q->whereRaw('((meetings.duration / 60) * employee_cost_masters.ctc) >= ?', [$data['min_cost']]))
+                            ->when($data['max_cost'], fn ($q) => $q->whereRaw('((meetings.duration / 60) * employee_cost_masters.ctc) <= ?', [$data['max_cost']]));
                     })
             ])
             ->headerActions([

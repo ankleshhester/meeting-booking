@@ -66,7 +66,7 @@ class MeetingCostReport extends Page implements HasTable
                         DB::raw('
                             SUM(
                                 (meetings.duration / 60)
-                                * COALESCE(employee_cost_masters.cost_per_hour, 0)
+                                * COALESCE(employee_cost_masters.ctc, 0)
                                 / 2500
                             ) as total_meeting_cost
                         '),
@@ -180,18 +180,18 @@ class MeetingCostReport extends Page implements HasTable
                 'attendees.email',
 
                 // Raw CTC (optional, useful for debugging / display)
-                'employee_cost_masters.cost_per_hour as ctc',
+                'employee_cost_masters.ctc as ctc',
 
                 // Meeting duration in hours
                 DB::raw('(meetings.duration / 60) as hours'),
 
                 // Hourly cost derived from CTC
-                DB::raw('(employee_cost_masters.cost_per_hour / 2500) as hourly_cost'),
+                DB::raw('(employee_cost_masters.ctc / 2500) as hourly_cost'),
 
                 // ✅ Individual attendee cost (hours × hourly cost)
                 DB::raw('
                     (meetings.duration / 60)
-                    * (employee_cost_masters.cost_per_hour / 2500)
+                    * (employee_cost_masters.ctc / 2500)
                     as individual_cost
                 '),
             ])

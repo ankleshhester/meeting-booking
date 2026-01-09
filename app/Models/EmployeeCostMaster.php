@@ -17,19 +17,19 @@ class EmployeeCostMaster extends Model
     protected $fillable = [
         'emp_code',
         'email',
-        'cost_per_hour',
+        'ctc',
     ];
 
     public $orderable = [
         'id',
         'emp_code',
-        'cost_per_hour',
+        'ctc',
     ];
 
     public $filterable = [
         'id',
         'emp_code',
-        'cost_per_hour',
+        'ctc',
     ];
 
     protected $dates = [

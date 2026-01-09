@@ -16,7 +16,7 @@ class EmployeeCostMasterForm
                 TextInput::make('email')
                     ->email()
                     ->required(),
-                TextInput::make('cost_per_hour')
+                TextInput::make('ctc')
                     ->label('CTC')
                     ->required()
                     ->numeric(),
