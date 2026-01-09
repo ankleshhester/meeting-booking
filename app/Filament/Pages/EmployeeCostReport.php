@@ -55,6 +55,14 @@ class EmployeeCostReport extends Page implements HasTable
                             DB::raw('LOWER(attendees.email)')
                         );
                     })
+                    ->when(
+                        auth()->user()->hasRole('user'),
+                        fn (Builder $query) =>
+                            $query->whereRaw(
+                                'LOWER(attendees.email) = ?',
+                                [strtolower(auth()->user()->email)]
+                            )
+                    )
                      ->select([
                         // Required unique key for Filament
                         DB::raw('CONCAT(attendees.id, "-", meetings.id) as id'),
