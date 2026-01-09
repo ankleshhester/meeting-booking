@@ -88,7 +88,6 @@ class MeetingForm
                                 return null;
                             }
                         })
-                        ->readOnly()
                         ->reactive()
                         ->afterStateUpdated(function ($state, callable $set, callable $get) {
                             $start = Carbon::parse($get('start_time'));
