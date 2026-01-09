@@ -136,10 +136,11 @@ class MeetingForm
 
                     Forms\Components\Select::make('rooms_id')
                         ->label('Conference Room')
-                        ->options(fn (callable $get) => self::getAvailableRooms($get))
+                        ->relationship('rooms', 'name') // ✅ THIS IS THE KEY
                         ->searchable()
                         ->preload()
-                        ->required(),
+                        ->required()
+                        ->options(fn (callable $get) => self::getAvailableRooms($get)),
 
                 ])
                 ->columns(3)
