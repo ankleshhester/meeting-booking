@@ -37,10 +37,14 @@
                         {{ $attendee->email }}
                     </td>
 
+                    @php
+                        $hourlyCost = $attendee->ctc ? $attendee->ctc / 2500 : null;
+                    @endphp
+
                     <td class="px-4 py-3 text-right whitespace-nowrap
-                               border-b border-r border-gray-200
-                               text-gray-600 dark:border-white/5 dark:text-gray-400">
-                        ₹{{ number_format($attendee->ctc, 2) }}
+                            border-b border-r border-gray-200
+                            text-gray-600 dark:border-white/5 dark:text-gray-400">
+                        ₹{{ $hourlyCost !== null ? number_format($hourlyCost, 2) : 'N/A' }}
                     </td>
 
                     <td class="px-4 py-3 text-center whitespace-nowrap font-mono
