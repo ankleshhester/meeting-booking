@@ -80,7 +80,10 @@ class EmployeeCostReport extends Page implements HasTable
             ->columns([
                 TextColumn::make('employee_email')
                     ->label('Employee Email')
-                    ->searchable()
+                    ->searchable(
+                        query: fn (Builder $query, string $search): Builder =>
+                            $query->where('attendees.email', 'like', "%{$search}%")
+                    )
                     ->sortable(),
 
                 TextColumn::make('meeting_date')
@@ -90,7 +93,10 @@ class EmployeeCostReport extends Page implements HasTable
 
                 TextColumn::make('meeting_title')
                     ->label('Meeting Title')
-                    ->searchable(),
+                    ->searchable(
+                        query: fn (Builder $query, string $search): Builder =>
+                            $query->where('meetings.name', 'like', "%{$search}%")
+                    ),
 
                 TextColumn::make('duration_hours')
                     ->label('Hours')
