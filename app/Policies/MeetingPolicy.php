@@ -7,6 +7,7 @@ namespace App\Policies;
 use App\Models\Meeting;
 use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Carbon\Carbon;
 
 class MeetingPolicy
 {
@@ -37,6 +38,10 @@ class MeetingPolicy
 
     public function update(AuthUser $authUser, Meeting $meeting): bool
     {
+        if (Carbon::parse($meeting->date)->lt(Carbon::today())) {
+            return false;
+        }
+
         return $authUser->can('Update:Meeting');
     }
 
