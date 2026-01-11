@@ -10,6 +10,7 @@ use Filament\Resources\Pages\EditRecord;
 use Filament\Notifications\Notification;
 use Filament\Actions\Action;
 use Carbon\Carbon;
+use App\Models\Meeting;
 
 class EditMeeting extends EditRecord
 {
@@ -25,17 +26,39 @@ class EditMeeting extends EditRecord
                 ->requiresConfirmation()
                 ->visible(fn () => $this->canShowEndMeetingButton())
                 ->action(function () {
-                    $this->record->update([
-                        'end_time' => Carbon::now()->format('H:i'),
+
+                    $meeting = $this->record;
+
+                    // Normalize start time
+                    $startTime = Carbon::parse($meeting->start_time)->format('H:i:s');
+                    $startDateTime = Carbon::parse("{$meeting->date} {$startTime}");
+
+                    $now = Carbon::now();
+
+                    // 🧮 Actual duration in minutes
+                    $actualMinutes = $startDateTime->diffInMinutes($now);
+
+                    // 🎯 Pick closest allowed duration
+                    $allowedDurations = array_keys(Meeting::DURATION_SELECT);
+
+                    $closestDuration = collect($allowedDurations)
+                        ->map(fn ($d) => (int) $d)
+                        ->sortBy(fn ($d) => abs($d - $actualMinutes))
+                        ->first();
+
+                    // 🕒 Final end time based on actual click time
+                    $meeting->update([
+                        'end_time' => $now->format('H:i'),
+                        'duration' => $closestDuration,
                     ]);
 
                     Notification::make()
                         ->success()
                         ->title('Meeting Ended')
-                        ->body('The meeting has been ended successfully.')
+                        ->body("Meeting ended after {$actualMinutes} mins (Saved as {$closestDuration} mins).")
                         ->send();
 
-                    $this->refreshFormData(['end_time']);
+                    $this->refreshFormData(['end_time', 'duration']);
                 }),
 
             DeleteAction::make(),
@@ -57,9 +80,12 @@ class EditMeeting extends EditRecord
 
         $now = Carbon::now();
 
-        $startDateTime = Carbon::parse("{$meeting->date} {$meeting->start_time}");
-        $endDateTime   = Carbon::parse("{$meeting->date} {$meeting->end_time}");
-        $expiryTime    = $endDateTime->copy()->addHours(4);
+        $startTime = Carbon::parse($meeting->start_time)->format('H:i:s');
+        $endTime   = Carbon::parse($meeting->end_time)->format('H:i:s');
+
+        $startDateTime = Carbon::parse("{$meeting->date} {$startTime}");
+        $endDateTime   = Carbon::parse("{$meeting->date} {$endTime}");
+        $expiryTime    = $endDateTime->copy()->addHours(2);
 
         return $now->greaterThanOrEqualTo($startDateTime)
             && $now->lessThanOrEqualTo($expiryTime);

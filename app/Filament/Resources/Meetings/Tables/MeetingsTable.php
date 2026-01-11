@@ -68,6 +68,7 @@ class MeetingsTable
                     ->dateTime(config('project.datetime_format'))
                     ->sortable(),
             ])
+            ->defaultSort('date', 'desc')
             ->filters([
                 TrashedFilter::make(),
             ])
