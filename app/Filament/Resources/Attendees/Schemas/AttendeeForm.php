@@ -11,6 +11,11 @@ class AttendeeForm
     {
         return $schema
             ->components([
+                // Added emp_code field unique to Attendees
+                TextInput::make('emp_code')
+                    ->label('Employee Code')
+                    ->unique(table: 'attendees', ignorable: fn ($record) => $record)
+                    ->required(),
                 TextInput::make('email')
                     ->label('Email address')
                     ->email()

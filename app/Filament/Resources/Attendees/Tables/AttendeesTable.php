@@ -12,6 +12,7 @@ use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Filament\Actions\ImportAction;
 use App\Filament\Imports\AttendeeImporter;
+use Dom\Text;
 
 class AttendeesTable
 {
@@ -19,6 +20,9 @@ class AttendeesTable
     {
         return $table
             ->columns([
+                TextColumn::make('emp_code')
+                    ->label('Employee Code')
+                    ->searchable(),
                 TextColumn::make('email')
                     ->label('Email address')
                     ->searchable(),

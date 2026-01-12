@@ -15,6 +15,10 @@ class AttendeeImporter extends Importer
     public static function getColumns(): array
     {
         return [
+            ImportColumn::make('emp_code')
+                ->label('Employee Code')
+                ->example('3070'),
+
             ImportColumn::make('name')
                 ->label('Name')
                 ->example('Anklesh Chauhan'),

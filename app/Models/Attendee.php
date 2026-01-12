@@ -23,6 +23,7 @@ class Attendee extends Model
     protected $fillable = [
         'email',
         'name',
+        'emp_code',
         'comment',
         'response_status',
     ];
@@ -30,6 +31,7 @@ class Attendee extends Model
     public $orderable = [
         'id',
         'email',
+        'emp_code',
         'name',
         'comment',
         'response_status',
@@ -38,6 +40,7 @@ class Attendee extends Model
     public $filterable = [
         'id',
         'email',
+        'emp_code',
         'name',
         'comment',
         'response_status',
