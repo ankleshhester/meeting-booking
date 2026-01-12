@@ -133,18 +133,25 @@ class EmployeeCostReport extends Page implements HasTable
                 // Date Range Filter
                 Filter::make('meeting_date')
                     ->form([
-                        DatePicker::make('from')->label('From Date'),
-                        DatePicker::make('until')->label('To Date'),
+                        DatePicker::make('from')
+                            ->label('From Date')
+                            ->default(now()->toDateString()),
+
+                        DatePicker::make('until')
+                            ->label('To Date')
+                            ->default(now()->toDateString()),
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
                             ->when(
-                                $data['from'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('meetings.date', '>=', $date),
+                                $data['from'] ?? null,
+                                fn (Builder $query, $date) =>
+                                    $query->whereDate('meetings.date', '>=', $date),
                             )
                             ->when(
-                                $data['until'],
-                                fn (Builder $query, $date): Builder => $query->whereDate('meetings.date', '<=', $date),
+                                $data['until'] ?? null,
+                                fn (Builder $query, $date) =>
+                                    $query->whereDate('meetings.date', '<=', $date),
                             );
                     }),
 
