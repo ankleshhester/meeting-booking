@@ -64,6 +64,11 @@ class MeetingsTable
                     ->sortable()
                     ->searchable(),
 
+                Tables\Columns\TextColumn::make('status')
+                    ->label('Status')
+                    ->sortable()
+                    ->searchable(),
+
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime(config('project.datetime_format'))
                     ->sortable(),

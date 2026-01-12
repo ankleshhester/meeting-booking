@@ -49,6 +49,7 @@ class Meeting extends Model
         'add_meet_link',
         'rooms.name',
         'meeting_mode',
+        'status',
     ];
 
     public $filterable = [
@@ -62,6 +63,7 @@ class Meeting extends Model
         'add_attendee.email',
         'rooms.name',
         'meeting_mode',
+        'status',
     ];
 
     protected $fillable = [
@@ -76,6 +78,7 @@ class Meeting extends Model
         'meeting_mode',
         'created_by_id',
         'attachments',
+        'status',
     ];
 
     public const DURATION_SELECT = [

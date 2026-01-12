@@ -219,7 +219,9 @@ class MeetingForm
 
         return ConferenceRoom::query()
             ->whereDoesntHave('meeting', function ($query) use ($date, $start, $end, $currentMeetingId) {
-                $query->whereDate('date', $date)
+                $query
+                    ->where('meetings.status', '!=', 'cancelled')
+                    ->whereDate('date', $date)
                     ->where(function ($q) use ($start, $end) {
                         $q->whereTime('start_time', '<', $end)
                         ->whereTime('end_time', '>', $start);

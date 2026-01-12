@@ -19,6 +19,27 @@ class EditMeeting extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('cancelMeeting')
+            ->label('Cancel Meeting')
+            ->icon('heroicon-o-x-circle')
+            ->color('warning')
+            ->requiresConfirmation()
+            ->visible(fn () => $this->canShowCancelMeetingButton())
+            ->action(function () {
+
+                $this->record->update([
+                    'status' => 'cancelled',
+                ]);
+
+                Notification::make()
+                    ->success()
+                    ->title('Meeting Cancelled')
+                    ->body('The meeting has been cancelled successfully.')
+                    ->send();
+
+                $this->refreshFormData(['status']);
+            }),
+
             Action::make('endMeeting')
                 ->label('End Meeting')
                 ->icon('heroicon-o-stop-circle')
@@ -90,4 +111,24 @@ class EditMeeting extends EditRecord
         return $now->greaterThanOrEqualTo($startDateTime)
             && $now->lessThanOrEqualTo($expiryTime);
     }
+
+    protected function canShowCancelMeetingButton(): bool
+    {
+        $meeting = $this->record;
+
+        if (! $meeting?->date || ! $meeting?->start_time) {
+            return false;
+        }
+
+        // ❌ Do not show if already cancelled or completed
+        if (in_array($meeting->status, ['cancelled', 'completed'], true)) {
+            return false;
+        }
+
+        $startTime = Carbon::parse($meeting->start_time)->format('H:i:s');
+        $startDateTime = Carbon::parse("{$meeting->date} {$startTime}");
+
+        return Carbon::now()->lessThan($startDateTime);
+    }
+
 }

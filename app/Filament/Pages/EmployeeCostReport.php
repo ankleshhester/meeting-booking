@@ -49,6 +49,11 @@ class EmployeeCostReport extends Page implements HasTable
                 \App\Models\Attendee::query()
                     ->join('attendee_meeting', 'attendee_meeting.attendee_id', '=', 'attendees.id')
                     ->join('meetings', 'meetings.id', '=', 'attendee_meeting.meeting_id')
+                    ->where(function (Builder $query) {
+                            $query
+                                ->whereNull('meetings.status')
+                                ->orWhere('meetings.status', '!=', 'cancelled');
+                        })
                     // Use leftJoin so if email doesn't exist in cost master, the attendee is still kept
                     ->leftJoin('employee_cost_masters', function ($join) {
                         $join->on(
