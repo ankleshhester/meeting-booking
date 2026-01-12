@@ -25,6 +25,7 @@ class AttendeesTable
             ->columns([
                 TextColumn::make('emp_code')
                     ->label('Employee Code')
+                    ->sortable()
                     ->searchable(),
                 TextColumn::make('email')
                     ->label('Email address')
@@ -33,23 +34,6 @@ class AttendeesTable
                     ->searchable(),
                 TextColumn::make('comment')
                     ->searchable(),
-                TextColumn::make('response_status')
-                    ->searchable(),
-                TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('updated_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('deleted_at')
-                    ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('owner_id')
-                    ->numeric()
-                    ->sortable(),
             ])
             ->filters([
                 TrashedFilter::make(),
