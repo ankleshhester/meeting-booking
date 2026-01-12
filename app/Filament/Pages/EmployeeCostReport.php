@@ -101,12 +101,12 @@ class EmployeeCostReport extends Page implements HasTable
                     ->date('d M Y')
                     ->sortable(),
 
-                TextColumn::make('meeting_title')
-                    ->label('Meeting Title')
-                    ->searchable(
-                        query: fn (Builder $query, string $search): Builder =>
-                            $query->where('meetings.name', 'like', "%{$search}%")
-                    ),
+                // TextColumn::make('meeting_title')
+                //     ->label('Meeting Title')
+                //     ->searchable(
+                //         query: fn (Builder $query, string $search): Builder =>
+                //             $query->where('meetings.name', 'like', "%{$search}%")
+                //     ),
 
                 TextColumn::make('duration_hours')
                     ->label('Hours')
