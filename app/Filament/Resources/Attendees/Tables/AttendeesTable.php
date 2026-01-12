@@ -13,6 +13,9 @@ use Filament\Tables\Table;
 use Filament\Actions\ImportAction;
 use App\Filament\Imports\AttendeeImporter;
 use Dom\Text;
+use pxlrbt\FilamentExcel\Actions\ExportAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
+use pxlrbt\FilamentExcel\Columns\Column as ExcelColumn;
 
 class AttendeesTable
 {
@@ -65,6 +68,23 @@ class AttendeesTable
                     ->label('Import Attendees')
                     ->icon('heroicon-o-arrow-up-on-square')
                     ->importer(AttendeeImporter::class),
+
+                // ✅ EXPORT ACTION
+                ExportAction::make()
+                    ->label('Export Attendees')
+                    ->icon('heroicon-o-arrow-down-tray')
+                    ->color('success')
+                    ->exports([
+                        ExcelExport::make()
+                            ->fromTable() // respects filters, search, sorting
+                            ->withFilename('attendees_' . now()->format('Y-m-d'))
+                            ->withColumns([
+                                ExcelColumn::make('emp_code')->heading('Employee Code'),
+                                ExcelColumn::make('email')->heading('Email'),
+                                ExcelColumn::make('name')->heading('Name'),
+                                ExcelColumn::make('comment')->heading('Comment'),
+                            ]),
+                    ]),
             ]);
     }
 }
