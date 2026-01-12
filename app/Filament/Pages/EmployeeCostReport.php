@@ -68,7 +68,7 @@ class EmployeeCostReport extends Page implements HasTable
                      ->select([
                         // Required unique key for Filament
                         DB::raw('CONCAT(attendees.id, "-", meetings.id) as id'),
-
+                        'attendees.emp_code as employee_code',
                         'attendees.email as employee_email',
                         'meetings.name as meeting_title',
                         'meetings.date as meeting_date',
@@ -88,6 +88,10 @@ class EmployeeCostReport extends Page implements HasTable
                     ])
             )
             ->columns([
+
+                TextColumn::make('employee_code')
+                    ->label('Employee Code'),
+
                 TextColumn::make('employee_email')
                     ->label('Employee Email')
                     ->searchable(
@@ -158,6 +162,7 @@ class EmployeeCostReport extends Page implements HasTable
                             ->fromTable()
                             ->withFilename('Employee_Cost_Report_' . now()->format('Y-m-d'))
                             ->withColumns([
+                                ExcelColumn::make('employee_code')->heading('Employee Code'),
                                 ExcelColumn::make('employee_email')->heading('Employee Email'),
                                 ExcelColumn::make('meeting_date')->heading('Date'),
                                 ExcelColumn::make('meeting_title')->heading('Meeting Title'),
