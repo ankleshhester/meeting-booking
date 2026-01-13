@@ -168,7 +168,7 @@ class EmployeeCostReport extends Page implements HasTable
                     })
             ])
             ->headerActions([
-                \pxlrbt\FilamentExcel\Actions\Tables\ExportAction::make()
+                \pxlrbt\FilamentExcel\Actions\ExportAction::make()
                     ->exports([
                         ExcelExport::make()
                             ->fromTable()
