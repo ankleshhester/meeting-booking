@@ -148,6 +148,7 @@ class MeetingForm
 
                     Forms\Components\Textarea::make('description')
                         ->label('Meeting Description')
+                        ->required()
                         ->columnSpanFull(),
 
                     FileUpload::make('attachments')
