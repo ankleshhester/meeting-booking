@@ -61,7 +61,7 @@ class ConferenceRoomAvailability extends TableWidget
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('booked_slots')
-                    ->label('Booked Time')
+                    ->label('Meeting Slots - Booked')
                     ->badge()
                     ->listWithLineBreaks()
                     ->getStateUsing(function ($record) {
@@ -86,7 +86,7 @@ class ConferenceRoomAvailability extends TableWidget
 
                 // ✅ NEW: Available Time column
                 Tables\Columns\TextColumn::make('available_slots')
-                    ->label('Available Time')
+                    ->label('Meeting Slots - Available')
                     ->badge()
                     ->listWithLineBreaks()
                     ->getStateUsing(function ($record) {
