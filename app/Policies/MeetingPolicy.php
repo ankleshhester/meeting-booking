@@ -4,15 +4,14 @@ declare(strict_types=1);
 
 namespace App\Policies;
 
-use App\Models\Meeting;
 use Illuminate\Foundation\Auth\User as AuthUser;
+use App\Models\Meeting;
 use Illuminate\Auth\Access\HandlesAuthorization;
-use Carbon\Carbon;
 
 class MeetingPolicy
 {
     use HandlesAuthorization;
-
+    
     public function viewAny(AuthUser $authUser): bool
     {
         return $authUser->can('ViewAny:Meeting');
@@ -20,15 +19,7 @@ class MeetingPolicy
 
     public function view(AuthUser $authUser, Meeting $meeting): bool
     {
-        // 1️⃣ Admin / permission-based access
-        if ($authUser->can('View:Meeting')) {
-            return true;
-        }
-
-        // 2️⃣ Attendee-based access (EMAIL MATCH)
-        return $meeting->addAttendee()
-            ->whereRaw('LOWER(attendees.email) = ?', [strtolower($authUser->email)])
-            ->exists();
+        return $authUser->can('View:Meeting');
     }
 
     public function create(AuthUser $authUser): bool
@@ -38,10 +29,6 @@ class MeetingPolicy
 
     public function update(AuthUser $authUser, Meeting $meeting): bool
     {
-        if (Carbon::parse($meeting->date)->lt(Carbon::today())) {
-            return false;
-        }
-
         return $authUser->can('Update:Meeting');
     }
 
@@ -79,4 +66,5 @@ class MeetingPolicy
     {
         return $authUser->can('Reorder:Meeting');
     }
+
 }
