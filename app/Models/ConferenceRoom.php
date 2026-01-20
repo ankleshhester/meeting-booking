@@ -53,6 +53,11 @@ class ConferenceRoom extends Model
         return $this->hasMany(Meeting::class, 'rooms_id', 'id');
     }
 
+    public function meetings()
+    {
+        return $this->hasMany(Meeting::class, 'rooms_id', 'id');
+    }
+
     public function owner()
     {
         return $this->belongsTo(User::class);

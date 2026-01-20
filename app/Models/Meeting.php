@@ -128,6 +128,11 @@ class Meeting extends Model
         return $this->belongsTo(User::class);
     }
 
+    public function organizer()
+    {
+        return $this->belongsTo(User::class, 'created_by_id');
+    }
+
     public function owner()
     {
         return $this->belongsTo(User::class);
