@@ -14,6 +14,8 @@ class ConferenceRoomAvailability extends TableWidget
     protected static ?string $heading = 'Conference Room Booking';
     protected static ?int $sort = 1;
 
+    protected int | string | array $columnSpan = 'full';
+
     protected function getHeading(): string
     {
         $dateFilter = $this->getTableFilterState('date');
