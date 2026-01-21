@@ -78,13 +78,32 @@ class MeetingsTable
                 TrashedFilter::make(),
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()
+                    ->visible(function ($record) {
+
+            if (! $record->date || ! $record->end_time) {
+                return false;
+            }
+
+            // Extract time only from end_time
+            $endTime = $record->end_time instanceof \Carbon\Carbon
+                ? $record->end_time->format('H:i:s')
+                : \Carbon\Carbon::parse($record->end_time)->format('H:i:s');
+
+            // Build final end datetime using record->date + extracted time
+            $endDateTime = \Carbon\Carbon::parse(
+                $record->date . ' ' . $endTime
+            );
+
+            // Allow edit until 2 hours after meeting end
+            return now()->lessThanOrEqualTo(
+                $endDateTime->copy()->addHours(2)
+            );
+        }),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                    ForceDeleteBulkAction::make(),
-                    RestoreBulkAction::make(),
+                    //
                 ]),
             ]);
     }
