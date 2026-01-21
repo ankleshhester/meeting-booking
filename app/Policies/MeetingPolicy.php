@@ -7,11 +7,12 @@ namespace App\Policies;
 use Illuminate\Foundation\Auth\User as AuthUser;
 use App\Models\Meeting;
 use Illuminate\Auth\Access\HandlesAuthorization;
+use Illuminate\Support\Carbon;
 
 class MeetingPolicy
 {
     use HandlesAuthorization;
-    
+
     public function viewAny(AuthUser $authUser): bool
     {
         return $authUser->can('ViewAny:Meeting');
@@ -29,7 +30,20 @@ class MeetingPolicy
 
     public function update(AuthUser $authUser, Meeting $meeting): bool
     {
-        return $authUser->can('Update:Meeting');
+         // Build meeting end datetime safely
+        try {
+            $endDateTime = Carbon::parse(
+                $meeting->date . ' ' . $meeting->end_time
+            );
+        } catch (\Exception $e) {
+            // If date/time is invalid, do NOT allow edit
+            return false;
+        }
+
+        // Allow edit until 2 hours after end time
+        return now()->lessThanOrEqualTo(
+            $endDateTime->copy()->addHours(2)
+        );
     }
 
     public function delete(AuthUser $authUser, Meeting $meeting): bool
