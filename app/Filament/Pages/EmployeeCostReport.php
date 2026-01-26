@@ -49,11 +49,20 @@ class EmployeeCostReport extends Page implements HasTable
                 \App\Models\Attendee::query()
                     ->join('attendee_meeting', 'attendee_meeting.attendee_id', '=', 'attendees.id')
                     ->join('meetings', 'meetings.id', '=', 'attendee_meeting.meeting_id')
+                    ->join('users as organizers', 'organizers.id', '=', 'meetings.created_by_id')
+
                     ->where(function (Builder $query) {
                             $query
                                 ->whereNull('meetings.status')
                                 ->orWhere('meetings.status', '!=', 'cancelled');
                         })
+                    ->leftJoin('attendees as organizer_attendees', function ($join) {
+                        $join->on(
+                            DB::raw('LOWER(organizer_attendees.email)'),
+                            '=',
+                            DB::raw('LOWER(organizers.email)')
+                        );
+                    })
                     // Use leftJoin so if email doesn't exist in cost master, the attendee is still kept
                     ->leftJoin('employee_cost_masters', function ($join) {
                         $join->on(
@@ -77,6 +86,9 @@ class EmployeeCostReport extends Page implements HasTable
                         'attendees.email as employee_email',
                         'meetings.name as meeting_title',
                         'meetings.date as meeting_date',
+                        'meetings.id as meeting_id',
+
+                        'organizer_attendees.emp_code as organizer_employee_code',
 
                         // Duration in hours
                         DB::raw('(meetings.duration / 60) as duration_hours'),
@@ -176,8 +188,10 @@ class EmployeeCostReport extends Page implements HasTable
                             ->withColumns([
                                 ExcelColumn::make('employee_code')->heading('Employee Code'),
                                 ExcelColumn::make('employee_email')->heading('Employee Email'),
+                                ExcelColumn::make('organizer_employee_code')->heading('Organizer Employee Code'),
                                 ExcelColumn::make('meeting_date')->heading('Date'),
                                 ExcelColumn::make('meeting_title')->heading('Meeting Title'),
+                                ExcelColumn::make('meeting_id')->heading('Meeting ID'),
                                 ExcelColumn::make('duration_hours')->heading('Hours'),
                                 ExcelColumn::make('total_cost')->heading('Total Cost (INR)'),
                             ]),
