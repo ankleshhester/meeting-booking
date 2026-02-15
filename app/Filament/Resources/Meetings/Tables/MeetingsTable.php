@@ -20,6 +20,9 @@ class MeetingsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) =>
+                $query->whereNull('parent_meeting_id')
+            )
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Meeting')

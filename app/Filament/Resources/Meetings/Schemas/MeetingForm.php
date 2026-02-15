@@ -26,6 +26,7 @@ use Filament\Schemas\Components\Group;
 use App\Mail\MeetingInviteWithICS;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\FileUpload;
+use Filament\Schemas\Components\Section;
 
 class MeetingForm
 {
@@ -106,6 +107,62 @@ class MeetingForm
                         })
                         ->required(),
 
+                    Toggle::make('is_recurring')
+                        ->label('Repeat meeting')
+                        ->reactive()
+                        ->default(fn ($record) => $record?->recurrence()->exists())
+                        ->disabled(fn ($record) => $record && ! $record->is_master)
+                        ->helperText(fn ($record) =>
+                            $record && ! $record->is_master
+                                ? 'This meeting is part of a recurring series. Edit the master meeting to change recurrence.'
+                                : null
+                        )
+                        ->afterStateHydrated(function ($state, callable $set, $record) {
+                            if ($record && $record->recurrence) {
+                                $set('is_recurring', true);
+
+                                $set('recurrence.frequency', $record->recurrence->frequency);
+                                $set('recurrence.interval', $record->recurrence->interval);
+                                $set('recurrence.days_of_week', $record->recurrence->days_of_week);
+                                $set('recurrence.start_date', $record->recurrence->start_date);
+                                $set('recurrence.end_date', $record->recurrence->end_date);
+                                $set('recurrence.occurrences', $record->recurrence->occurrences);
+                            }
+                        })
+                        ->afterStateUpdated(function ($state, callable $set) {
+                            if (! $state) {
+                                $set('recurrence.frequency', null);
+                                $set('recurrence.interval', null);
+                                $set('recurrence.days_of_week', []);
+                                $set('recurrence.start_date', null);
+                                $set('recurrence.end_date', null);
+                                $set('recurrence.occurrences', null);
+                                $set('is_master', $state ? true : false);
+                            }
+                        })
+                        ->afterStateHydrated(function ($state, callable $set, $record) {
+
+                            if (! $record) {
+                                return;
+                            }
+
+                            if ($record->recurrence) {
+                                $set('is_recurring', true);
+
+                                $set('recurrence.frequency', $record->recurrence->frequency);
+                                $set('recurrence.interval', $record->recurrence->interval);
+                                $set('recurrence.days_of_week', $record->recurrence->days_of_week);
+                                $set('recurrence.start_date', $record->recurrence->start_date);
+                                $set('recurrence.end_date', $record->recurrence->end_date);
+                                $set('recurrence.occurrences', $record->recurrence->occurrences);
+                            }
+                        }),
+
+                    Hidden::make('is_master')
+                        ->default(fn ($get) => $get('is_recurring') ? true : false)
+                        ->dehydrated(true),
+
+
                     // Forms\Components\Select::make('meeting_mode')
                     //     ->options(Meeting::MEETING_MODE_SELECT)
                     //     ->default('In-Person')
@@ -113,6 +170,74 @@ class MeetingForm
                 ])
                 ->columns(5)
                 ->columnSpanFull(),
+
+                        Group::make()
+                            ->schema([
+                                Forms\Components\Select::make('recurrence.frequency')
+                                    ->label('Frequency')
+                                    ->options([
+                                        'daily'   => 'Daily',
+                                        'weekly'  => 'Weekly',
+                                        'monthly' => 'Monthly',
+                                    ])
+                                    ->reactive()
+                                    ->visible(fn ($get, $record) =>
+                                        $get('is_recurring') && (! $record || $record->is_master)
+                                    )
+                                    ->required(),
+
+                                TextInput::make('recurrence.interval')
+                                    ->label('Repeat every')
+                                    ->numeric()
+                                    ->default(1)
+                                    ->minValue(1)
+                                    ->visible(fn ($get, $record) =>
+                                        $get('is_recurring') && (! $record || $record->is_master)
+                                    ),
+
+                                DatePicker::make('recurrence.start_date')
+                                    ->label('Start date')
+                                    ->default(fn ($get) => $get('date'))
+                                    ->visible(fn ($get, $record) =>
+                                        $get('is_recurring') && (! $record || $record->is_master)
+                                    ),
+
+                                DatePicker::make('recurrence.end_date')
+                                    ->label('End date')
+                                    ->visible(fn ($get, $record) =>
+                                        $get('is_recurring') && (! $record || $record->is_master)
+                                    ),
+
+                                TextInput::make('recurrence.occurrences')
+                                    ->label('Max occurrences')
+                                    ->numeric()
+                                    ->visible(fn ($get, $record) =>
+                                        $get('is_recurring') && (! $record || $record->is_master)
+                                    ),
+
+                                Forms\Components\CheckboxList::make('recurrence.days_of_week')
+                                    ->label('Days of week')
+                                    ->options([
+                                        'mon' => 'Mon',
+                                        'tue' => 'Tue',
+                                        'wed' => 'Wed',
+                                        'thu' => 'Thu',
+                                        'fri' => 'Fri',
+                                        'sat' => 'Sat',
+                                        'sun' => 'Sun',
+                                    ])
+                                    ->reactive()
+                                    ->columns(7)
+                                    ->columnSpanFull()
+                                    ->visible(fn ($get, $record) =>
+                                        $get('is_recurring')
+                                        && $get('recurrence.frequency') === 'weekly'
+                                        && (! $record || $record->is_master)
+                                    )
+                            ])
+                            ->columnSpanFull()
+                            ->columns(5),
+
 
                 Group::make()
                 ->schema([

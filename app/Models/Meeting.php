@@ -6,6 +6,7 @@ use Carbon\Carbon;
 use DateTimeInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Meeting extends Model
@@ -132,6 +133,12 @@ class Meeting extends Model
     {
         return $this->belongsTo(User::class, 'created_by_id');
     }
+
+    public function recurrence(): HasOne
+    {
+        return $this->hasOne(MeetingRecurrence::class, 'meeting_id');
+    }
+
 
     public function owner()
     {

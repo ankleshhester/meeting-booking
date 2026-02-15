@@ -90,7 +90,7 @@ class MeetingInviteWithICS extends Mailable
             . "DESCRIPTION:{$meeting->description}\r\n"
             . "LAST-MODIFIED:{$dtStamp}\r\n"
             . "LOCATION:{$meeting->rooms->name}\r\n"
-            . "SEQUENCE:0\r\n"
+            . "SEQUENCE:{$meeting->updated_at->timestamp}\r\n"
             . "STATUS:CONFIRMED\r\n"
             . "SUMMARY:{$meeting->name}\r\n"
             . "TRANSP:OPAQUE\r\n"
