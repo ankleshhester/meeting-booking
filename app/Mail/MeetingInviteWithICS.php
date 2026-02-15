@@ -4,8 +4,6 @@ namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
-use Illuminate\Mail\Mailables\Content;
-use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 use App\Models\Meeting;
 use Carbon\Carbon;
@@ -14,101 +12,135 @@ class MeetingInviteWithICS extends Mailable
 {
     use Queueable, SerializesModels;
 
-    public $meeting;
+    public Meeting $meeting;
+    protected bool $isCancel;
 
-    /**
-     * Create a new message instance.
-     */
-    public function __construct(Meeting $meeting)
+    public function __construct(Meeting $meeting, bool $isCancel = false)
     {
-        $this->meeting = $meeting;
+        $this->meeting = $meeting->fresh(['recurrence', 'addAttendee', 'host', 'rooms']);
+        $this->isCancel = $isCancel;
     }
 
-    /**
-     * Get the message envelope.
-     */
-    public function envelope(): Envelope
-    {
-        return new Envelope(
-            subject: 'Meeting Invitation: ' . $this->meeting->name,
-        );
-    }
-
-    /**
-     * Build the message.
-     */
     public function build()
     {
         $meeting = $this->meeting;
 
-        // 🛑 FIX: Correctly parse the date and time to prevent "Double date specification" error
-        // 1. Get the date component (YYYY-MM-DD)
-        $startDateTime = Carbon::parse($meeting->date);
+        /*
+        |--------------------------------------------------------------------------
+        | Build Start & End (UTC Required for Google)
+        |--------------------------------------------------------------------------
+        */
+        $start = Carbon::parse($meeting->date)
+            ->setTimeFromTimeString($meeting->start_time);
 
-        // 2. Get the time component (HH:MM:SS)
-        $startTime = Carbon::parse($meeting->start_time);
+        $end = $start->copy()->addMinutes((int) $meeting->duration);
 
-        // 3. Combine them: set the hour/minute/second of the date to the time component
-        $startDateTime->setTime($startTime->hour, $startTime->minute, $startTime->second);
+        $startUtc = $start->copy()->setTimezone('UTC');
+        $endUtc   = $end->copy()->setTimezone('UTC');
 
-        // Format DTSTART for the ICS file
-        $dtStart = $startDateTime->format('Ymd\THis');
-
-        // Calculate DTEND by adding duration to DTSTART
-        $endDateTime = $startDateTime->copy()->addMinutes((int) $meeting->duration);
-        $dtEnd = $endDateTime->format('Ymd\THis');
-
-        // Format DTSTAMP
+        $dtStart = $startUtc->format('Ymd\THis\Z');
+        $dtEnd   = $endUtc->format('Ymd\THis\Z');
         $dtStamp = now()->setTimezone('UTC')->format('Ymd\THis\Z');
 
-        $hostName = str_replace(['\\', ',', ';'], ['\\\\', '\,', '\;'], $meeting->host->name);
+        /*
+        |--------------------------------------------------------------------------
+        | RRULE (Recurring Support)
+        |--------------------------------------------------------------------------
+        */
+        $rrule = '';
 
-        // 🔑 FIX: Generate the attendee list using standard PHP concatenation
-        $attendeeList = '';
+        if ($meeting->recurrence) {
 
-        // Add Host as an explicit attendee
-        $attendeeList .= "ATTENDEE;CN={$hostName};RSVP=TRUE:mailto:{$meeting->host->email}\r\n";
+            $freq     = strtoupper($meeting->recurrence->frequency);
+            $interval = $meeting->recurrence->interval ?? 1;
 
-        // Add other attendees
-        foreach ($meeting->addAttendee as $attendee) {
-            $name = str_replace(['\\', ',', ';'], ['\\\\', '\,', '\;'], $attendee->name ?? $attendee->email);
-            $attendeeList .= "ATTENDEE;CN={$name};RSVP=TRUE:mailto:{$attendee->email}\r\n";
+            $rrule = "RRULE:FREQ={$freq};INTERVAL={$interval}";
+
+            if ($meeting->recurrence->occurrences) {
+                $rrule .= ";COUNT={$meeting->recurrence->occurrences}";
+            }
+
+            if ($meeting->recurrence->end_date) {
+                $until = Carbon::parse($meeting->recurrence->end_date)
+                    ->endOfDay()
+                    ->setTimezone('UTC')
+                    ->format('Ymd\THis\Z');
+
+                $rrule .= ";UNTIL={$until}";
+            }
+
+            $rrule .= "\r\n";
         }
 
-        // Build the ICS content string
-        $icsContent = "BEGIN:VCALENDAR\r\n"
+        /*
+        |--------------------------------------------------------------------------
+        | Escape Text
+        |--------------------------------------------------------------------------
+        */
+        $escape = fn($value) =>
+            str_replace(['\\', ',', ';', "\n"], ['\\\\', '\,', '\;', '\n'], $value ?? '');
+
+        $hostName  = $escape($meeting->host->name ?? '');
+        $summary   = $escape($meeting->name);
+        $desc      = $escape($meeting->description);
+        $location  = $escape($meeting->rooms->name ?? '');
+
+        /*
+        |--------------------------------------------------------------------------
+        | Attendees
+        |--------------------------------------------------------------------------
+        */
+        $attendeeLines = '';
+
+        foreach ($meeting->addAttendee as $attendee) {
+
+            $name = $escape($attendee->name ?? $attendee->email);
+
+            $attendeeLines .=
+                "ATTENDEE;CN={$name};RSVP=TRUE:mailto:{$attendee->email}\r\n";
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | ICS Content
+        |--------------------------------------------------------------------------
+        */
+        $method = $this->isCancel ? 'CANCEL' : 'REQUEST';
+        $status = $this->isCancel ? 'CANCELLED' : 'CONFIRMED';
+
+        $ics = "BEGIN:VCALENDAR\r\n"
             . "VERSION:2.0\r\n"
-            . "PRODID:-//Your Company//Meeting Scheduler//EN\r\n"
+            . "PRODID:-//YourCompany//MeetingScheduler//EN\r\n"
             . "CALSCALE:GREGORIAN\r\n"
-            . "METHOD:REQUEST\r\n"
+            . "METHOD:{$method}\r\n"
             . "BEGIN:VEVENT\r\n"
+            . "UID:{$meeting->id}@yourdomain.com\r\n"
+            . "DTSTAMP:{$dtStamp}\r\n"
             . "DTSTART:{$dtStart}\r\n"
             . "DTEND:{$dtEnd}\r\n"
-            . "DTSTAMP:{$dtStamp}\r\n"
-            . "UID:{$meeting->id}@yourdomain.com\r\n"
-            . "CREATED:{$meeting->created_at->format('Ymd\THis\Z')}\r\n"
-            . "DESCRIPTION:{$meeting->description}\r\n"
-            . "LAST-MODIFIED:{$dtStamp}\r\n"
-            . "LOCATION:{$meeting->rooms->name}\r\n"
+            . $rrule
             . "SEQUENCE:{$meeting->updated_at->timestamp}\r\n"
-            . "STATUS:CONFIRMED\r\n"
-            . "SUMMARY:{$meeting->name}\r\n"
-            . "TRANSP:OPAQUE\r\n"
+            . "STATUS:{$status}\r\n"
+            . "SUMMARY:{$summary}\r\n"
+            . "DESCRIPTION:{$desc}\r\n"
+            . "LOCATION:{$location}\r\n"
             . "ORGANIZER;CN={$hostName}:mailto:{$meeting->host->email}\r\n"
-            . $attendeeList // Inject the PHP-generated attendee list
+            . $attendeeLines
             . "END:VEVENT\r\n"
             . "END:VCALENDAR\r\n";
 
         return $this
-            ->view('emails.meeting_invite') // Your Blade view for the email body
-            ->with([
-                'meeting' => $meeting,
-            ])
+            ->subject(
+                ($this->isCancel ? 'Cancelled: ' : 'Updated: ')
+                . $meeting->name
+            )
+            ->view('emails.meeting_invite')
+            ->with(['meeting' => $meeting])
             ->attachData(
-                $icsContent,
+                $ics,
                 'invite.ics',
                 [
-                    'mime' => 'text/calendar', // Crucial for automatic calendar detection
+                    'mime' => 'text/calendar; method=' . $method . '; charset=UTF-8',
                 ]
             );
     }
