@@ -66,12 +66,19 @@ class EditMeeting extends EditRecord
             ->body('The meeting has been cancelled successfully.')
             ->send();
 
-        $this->refreshFormData(['status']);
+        $recipientEmails = $this->record->addAttendee()
+            ->pluck('email')
+            ->filter()
+            ->unique()
+            ->toArray();
+
 
         if (! empty($recipientEmails)) {
             Mail::to($recipientEmails)
                 ->send(new MeetingInviteWithICS($this->record, 'cancel'));
         }
+
+        $this->refreshFormData(['status']);
 
     }
 
