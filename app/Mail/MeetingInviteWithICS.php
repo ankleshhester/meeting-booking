@@ -15,10 +15,14 @@ class MeetingInviteWithICS extends Mailable
     public Meeting $meeting;
     protected bool $isCancel;
 
-    public function __construct(Meeting $meeting, bool $isCancel = false)
+
+
+    protected string $mode; // create | update | cancel
+
+    public function __construct(Meeting $meeting, string $mode = 'create')
     {
         $this->meeting = $meeting->fresh(['recurrence', 'addAttendee', 'host', 'rooms']);
-        $this->isCancel = $isCancel;
+        $this->mode = $mode;
     }
 
     public function build()
@@ -105,8 +109,15 @@ class MeetingInviteWithICS extends Mailable
         | ICS Content
         |--------------------------------------------------------------------------
         */
-        $method = $this->isCancel ? 'CANCEL' : 'REQUEST';
-        $status = $this->isCancel ? 'CANCELLED' : 'CONFIRMED';
+        $method = match ($this->mode) {
+            'cancel' => 'CANCEL',
+            default  => 'REQUEST',
+        };
+
+        $status = match ($this->mode) {
+            'cancel' => 'CANCELLED',
+            default  => 'CONFIRMED',
+        };
 
         $ics = "BEGIN:VCALENDAR\r\n"
             . "VERSION:2.0\r\n"
@@ -129,11 +140,14 @@ class MeetingInviteWithICS extends Mailable
             . "END:VEVENT\r\n"
             . "END:VCALENDAR\r\n";
 
+        $subjectPrefix = match ($this->mode) {
+            'cancel' => 'Cancelled: ',
+            'update' => 'Updated: ',
+            default  => 'Invitation: ',
+        };
+
         return $this
-            ->subject(
-                ($this->isCancel ? 'Cancelled: ' : 'Updated: ')
-                . $meeting->name
-            )
+            ->subject($subjectPrefix . $meeting->name)
             ->view('emails.meeting_invite')
             ->with(['meeting' => $meeting])
             ->attachData(

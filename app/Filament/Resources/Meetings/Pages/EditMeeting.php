@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Meetings\Pages;
 
 use App\Filament\Resources\Meetings\MeetingResource;
+use App\Mail\MeetingInviteWithICS;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ForceDeleteAction;
@@ -13,6 +14,7 @@ use Carbon\Carbon;
 use App\Models\Meeting;
 use App\Services\RecurringMeetingService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Mail;
 
 class EditMeeting extends EditRecord
 {
@@ -65,6 +67,12 @@ class EditMeeting extends EditRecord
             ->send();
 
         $this->refreshFormData(['status']);
+
+        if (! empty($recipientEmails)) {
+            Mail::to($recipientEmails)
+                ->send(new MeetingInviteWithICS($this->record, 'cancel'));
+        }
+
     }
 
     protected function endMeeting(): void
@@ -231,8 +239,8 @@ class EditMeeting extends EditRecord
             ->toArray();
 
         if (! empty($recipientEmails)) {
-            \Mail::to($recipientEmails)
-                ->send(new \App\Mail\MeetingInviteWithICS($meeting));
+            Mail::to($recipientEmails)
+                ->send(new MeetingInviteWithICS($meeting, 'update'));
         }
     }
 

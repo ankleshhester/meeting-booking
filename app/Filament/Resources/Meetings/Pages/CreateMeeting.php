@@ -140,9 +140,8 @@ class CreateMeeting extends CreateRecord
             ->toArray();
 
         if (! empty($recipientEmails)) {
-            Mail::to($recipientEmails)->send(
-                new MeetingInviteWithICS($meeting)
-            );
+            Mail::to($recipientEmails)
+                ->send(new MeetingInviteWithICS($meeting, 'create'));
         }
     }
 }
