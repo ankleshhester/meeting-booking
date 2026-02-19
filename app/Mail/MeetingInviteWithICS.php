@@ -34,16 +34,20 @@ class MeetingInviteWithICS extends Mailable
         | Build Start & End (UTC Required for Google)
         |--------------------------------------------------------------------------
         */
-        $start = Carbon::parse($meeting->date)
-            ->setTimeFromTimeString($meeting->start_time);
+        // 1. Get your app's timezone
+        $appTz = config('app.timezone');
+
+        // 2. Parse the start time. If it's a full string, Carbon handles it.
+        // We use setDate() to ensure it matches the meeting's primary date record.
+        $dateParts = Carbon::parse($meeting->date);
+        $start = Carbon::parse($meeting->start_time, $appTz)
+            ->setDate($dateParts->year, $dateParts->month, $dateParts->day);
 
         $end = $start->copy()->addMinutes((int) $meeting->duration);
 
-        $startUtc = $start->copy()->setTimezone('UTC');
-        $endUtc   = $end->copy()->setTimezone('UTC');
-
-        $dtStart = $startUtc->format('Ymd\THis\Z');
-        $dtEnd   = $endUtc->format('Ymd\THis\Z');
+        // 3. Format for ICS (UTC)
+        $dtStart = $start->clone()->setTimezone('UTC')->format('Ymd\THis\Z');
+        $dtEnd   = $end->clone()->setTimezone('UTC')->format('Ymd\THis\Z');
         $dtStamp = now()->setTimezone('UTC')->format('Ymd\THis\Z');
 
         /*
