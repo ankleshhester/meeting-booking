@@ -86,7 +86,7 @@ class EditMeeting extends EditRecord
     {
         $meeting = $this->record;
 
-        $startDateTime = Carbon::parse("{$meeting->date} {$meeting->start_time}");
+        $startDateTime = Carbon::parse("{$meeting->date} " . $meeting->start_time->format('H:i:s'));
 
         $startDateTime = Carbon::parse($meeting->date)
             ->setTimeFromTimeString($meeting->start_time);
